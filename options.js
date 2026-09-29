@@ -10,7 +10,7 @@ $("save").onclick = async () => {
 };
 $("clear").onclick = async () => {
   const all = await chrome.storage.local.get(null);
-  await chrome.storage.local.remove(Object.keys(all).filter((k) => /^(v\d+|entry|cache|edu|co|pay):/.test(k)));
+  await chrome.storage.local.remove(Object.keys(all).filter((k) => /^(v\d+|entry|cache|edu|co\d*|pay):/.test(k)));
   flash("Cache cleared");
 };
 

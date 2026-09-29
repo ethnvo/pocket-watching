@@ -8,18 +8,18 @@ const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shar
 // Shared-cache keys: the same company / role+location seen on a different profile
 // is fed back to the model as known facts so it doesn't search again.
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-const coKey = (company) => `co:${norm(company)}`;
+const coKey = (company) => `co2:${norm(company)}`;
 const payKey = (company, title, location, intern) =>
   `pay:${norm(company)}|${norm(title)}|${norm(location)}|${intern ? "intern" : "ft"}`;
 
 chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 
-// Seed the "Known pay" list from seed-pay.json the first time (install or update).
+// Seed the "Known pay" / "Known companies" lists from the bundled JSON the first time.
 chrome.runtime.onInstalled.addListener(async () => {
-  const { knownPay } = await chrome.storage.local.get("knownPay");
-  if (knownPay) return;
-  const seed = await fetch(chrome.runtime.getURL("seed-pay.json")).then((r) => r.json()).catch(() => []);
-  await chrome.storage.local.set({ knownPay: seed });
+  const have = await chrome.storage.local.get(["knownPay", "knownCompanies"]);
+  const load = (f) => fetch(chrome.runtime.getURL(f)).then((r) => r.json()).catch(() => []);
+  if (!have.knownPay) await chrome.storage.local.set({ knownPay: await load("seed-pay.json") });
+  if (!have.knownCompanies) await chrome.storage.local.set({ knownCompanies: await load("seed-companies.json") });
 });
 
 chrome.runtime.onInstalled.addListener(({ reason }) => {
@@ -58,16 +58,17 @@ function pump() {
 
 async function lookup(entries, profile) {
   const results = {};
-  const keys = entries.map((e) => `v4:${e.key}`);
+  const keys = entries.map((e) => `v5:${e.key}`);
   const cached = await chrome.storage.local.get(keys);
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`v4:${e.key}`];
+    const hit = cached[`v5:${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
-  const { knownPay = [] } = await chrome.storage.local.get("knownPay");
-  if (!misses.length) return applyKnownPay(results, entries, knownPay);
+  const { knownPay = [], knownCompanies = [] } = await chrome.storage.local.get(["knownPay", "knownCompanies"]);
+  const finish = (r) => applyKnownCompanies(applyKnownPay(r, entries, knownPay), entries, knownCompanies);
+  if (!misses.length) return finish(results);
 
   const { apiKey, model } = await chrome.storage.sync.get(["apiKey", "model"]);
   if (!apiKey) throw new Error("NO_KEY");
@@ -91,6 +92,8 @@ async function lookup(entries, profile) {
   for (const e of misses) {
     const k = findKnownPay(knownPay, e.hint?.company, e.hint?.title);
     if (k) facts.push(`${k.company}${k.role ? ` (${k.role})` : ""}: pay is ${k.hourly ? `$${k.hourly}/hr` : `$${k.annual}/yr`} — reported directly, exact.`);
+    const kc = findKnownCompany(knownCompanies, e.hint?.company);
+    if (kc?.note) facts.push(`${kc.company}: ${kc.note}`);
   }
   const knownFacts = facts.length
     ? `KNOWN FACTS from earlier lookups — trust these and don't search for them again:\n${facts.map((f) => "- " + f).join("\n")}\n\n`
@@ -114,30 +117,33 @@ B) PAY. Rules, in priority order:
   5. Founder/self-employed/volunteer/unpaid: pay fields null, explain in pay_basis.
 
 C) PRESTIGE TIER — how impressive/selective THIS SPECIFIC ROLE at THIS company is. The role matters as much as the company: rate the seat, not the logo.
-  THANOS = the absolute peak: core roles at top quant/HFT/prop firms (Jane Street, Citadel/Citadel Securities, Hudson River Trading, Jump, Two Sigma, DE Shaw, Optiver, IMC, SIG, Five Rings, Radix, Tower) — quant trader, quant researcher, quant dev, SWE; research scientist/engineer at frontier AI labs (OpenAI, Anthropic, Google DeepMind).
+  THANOS = the absolute peak: core roles at top quant/HFT/prop firms (Jane Street, Citadel/Citadel Securities, Hudson River Trading, Jump, Two Sigma, DE Shaw, Optiver, IMC, SIG, Five Rings, Radix, Tower) — quant trader, quant researcher, quant dev, SWE; research scientist/engineer at frontier AI labs (OpenAI, Anthropic, Google DeepMind); FOUNDING ENGINEER / first engineers at a legit, VC-backed startup (YC, a16z, Sequoia, etc.) — that seat beats a regular SWE job at big tech.
   S = elite & hyper-selective: SWE/eng at frontier AI labs or the hottest top startups, MBB consulting, elite rotational APM programs (Google APM, Meta RPM), top-bucket IB.
   A = strong core roles at Big Tech / top unicorns: SWE/ML/eng at Google, Meta, Apple, Nvidia, Netflix, Microsoft, Amazon, Stripe, Databricks, etc.
   B = good but not elite: non-core or less-selective roles at big tech (e.g. a product/PM or program-manager internship at Amazon is B, not A), core roles at well-known large companies (Visa, Salesforce, Adobe, big banks' tech), Big 4.
   MID = decent: solid respectable job that isn't impressive — mid-size/regional companies, defense contractors, non-tech corporate roles, funded startups with no notable brand.
-  C = weak signal: lesser-known startups/small companies, or a peripheral role anywhere.
-  D = unknown/tiny company, non-selective or unrelated role.
-  Non-core functions (ops, program/project management, sales, support, marketing, HR, IT) usually rank 1-2 tiers below the company's core engineering/trading seat. Founder: rate on the startup's traction/funding (default C if unknown).
+  C = the DEFAULT for any company that isn't well known — small/lesser-known startups and companies, anything you can't verify — unless a role bump below applies. Also a peripheral role anywhere.
+  D = non-selective or unrelated role (e.g. retail, food service) or clearly fake/placeholder company.
+  ROLE BUMPS / DROPS:
+  - Founding engineer or one of the first ~5 engineers at a verified, VC-backed startup → THANOS. At an unfunded/unverifiable company → C bumped one tier (MID).
+  - Founder/co-founder: rate on real traction/funding — top-VC-backed or YC → S/THANOS; unfunded or unknown → C.
+  - Non-core functions (ops, program/project management, sales, support, marketing, HR, IT) usually rank 1-2 tiers below the company's core engineering/trading seat.
 
 D) VERIFICATION — verified=true if the company is well known or you confirmed it exists, AND the pay figure is grounded in real data you know or found (for unpaid roles, just the org). verified=false if the company is too obscure to confirm or you're guessing the pay; say what's missing in verify_note.
 
 E) CATEGORY — pick exactly one:
   "FAANG" = Meta, Apple, Amazon (incl. AWS, Amazon Music, etc.), Netflix, Google/Alphabet.
-  "FAANG+" = the other megacap tech peers: Microsoft, Nvidia, Tesla, LinkedIn.
-  "FAANG-lite" = top-paying, prestigious tech one step below: Airbnb, Uber, Lyft, Snap, Pinterest, DoorDash, Coinbase, Robinhood, Databricks, Snowflake, Palantir, Roblox, Figma, Discord, Scale AI, etc.
+  "FAANG-adjacent" = peers right next to FAANG: Microsoft, Nvidia, Uber, DoorDash, LinkedIn, Tesla.
+  "FAANG-lite" = strong, well-paying companies a step below: Capital One, Airbnb, Lyft, Snap, Pinterest, Coinbase, Robinhood, Databricks, Snowflake, Palantir, Roblox, Figma, Discord, Scale AI, Stripe, Instacart, Reddit, Dropbox, etc.
   "AI Lab" = frontier AI labs: OpenAI, Anthropic, Google DeepMind, xAI, Mistral.
   "Quant" = quant trading / HFT / prop / market makers: Jane Street, Citadel Securities, HRT, Jump, Optiver, IMC, SIG, Five Rings, Tower, DRW.
   "Hedge Fund" = hedge funds & multi-managers: Citadel, Two Sigma, DE Shaw, Bridgewater, Millennium, Point72, Renaissance.
-  "Fintech" = payments/financial tech: Visa, Mastercard, PayPal, Stripe, Block, Plaid, Ramp, Brex, Chime, Affirm.
+  "Fintech" = payments/financial tech: Visa, Mastercard, PayPal, Block, Plaid, Ramp, Brex, Chime, Affirm.
   "Big Tech" = large established tech not above: Oracle, IBM, Salesforce, Adobe, Intel, Cisco, AMD, Qualcomm, ServiceNow, Workday.
   "Unicorn" = private startup valued at $1B+ not listed above.
   "Startup" = other startups (set stage when known).
   "Bank", "Consulting", "Defense", "Public co" (other public companies), "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed".
-  stage: for Startup only (not Unicorn), e.g. "Pre-seed", "Seed", "Series A", "Series B"; otherwise null.
+  stage: for Startup only (not Unicorn), and ONLY if you found an actual announced funding round ("Seed", "Series A", "Series B", ...). Unfunded/bootstrapped or unknown → null. Never guess "Pre-seed".
 
 Respond with ONLY a JSON array (no markdown fences), one object per entry, in the same order:
 [{
@@ -203,7 +209,7 @@ ${list}`;
     const e = misses[item?.i];
     if (!e) continue;
     results[e.key] = item;
-    toStore[`v4:${e.key}`] = { at: Date.now(), data: item };
+    toStore[`v5:${e.key}`] = { at: Date.now(), data: item };
 
     // Feed the shared cache (keyed on the scraped hint so the next lookup can find it).
     const h = e.hint || {};
@@ -226,20 +232,44 @@ ${list}`;
     }
   }
   await chrome.storage.local.set(toStore);
-  return applyKnownPay(results, entries, knownPay);
+  return finish(results);
 }
 
 // ---------- Known (user-reported) pay: always wins over the model's estimate ----------
 
+const sameCompany = (known, scraped) => {
+  const k = norm(known), c = norm(scraped);
+  return !!k && !!c && (c === k || c.startsWith(k + " "));
+};
+
 function findKnownPay(list, company, title) {
-  const c = norm(company);
-  if (!c) return null;
+  const hits = list.filter((k) => sameCompany(k.company, company));
   return (
-    list.find((k) => norm(k.company) === c && k.role && norm(title).includes(norm(k.role))) ||
-    list.find((k) => norm(k.company) === c && !k.role) ||
-    list.find((k) => norm(k.company) === c) ||
+    hits.find((k) => k.role && norm(title).includes(norm(k.role))) ||
+    hits.find((k) => !k.role) ||
+    hits[0] ||
     null
   );
+}
+
+function findKnownCompany(list, company) {
+  return list.find((k) => sameCompany(k.company, company)) || null;
+}
+
+// Known companies: fixed category/stage (e.g. your own startup).
+function applyKnownCompanies(results, entries, list) {
+  for (const e of entries) {
+    const r = results[e.key];
+    const k = r && findKnownCompany(list, e.hint?.company || r.company);
+    if (!k) continue;
+    results[e.key] = {
+      ...r,
+      ...(k.category ? { category: k.category } : {}),
+      stage: k.stage ?? null,
+      ...(k.tier ? { tier: k.tier } : {}),
+    };
+  }
+  return results;
 }
 
 function applyKnownPay(results, entries, list) {

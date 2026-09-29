@@ -238,8 +238,9 @@
 
   const CATEGORIES = {
     "FAANG": { cls: "faang", icon: "★" },
-    "FAANG+": { cls: "faangplus", icon: "★" },
-    "FAANG-lite": { cls: "faanglite", icon: "☆" },
+    "FAANG-adjacent": { cls: "faangadj", icon: "☆" },
+    "FAANG+": { cls: "faangadj", icon: "☆" },
+    "FAANG-lite": { cls: "faanglite", icon: "" },
     "AI Lab": { cls: "ailab", icon: "✦" },
     "Quant": { cls: "quant", icon: "∑" },
     "Hedge Fund": { cls: "hedge", icon: "◆" },

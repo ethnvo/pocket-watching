@@ -19,16 +19,16 @@
 .pw-t-D { background: #eeeeee; color: #6a6a6a; }
 
 /* flags */
-.pw-larp { background: #ff5a36; color: #fff; font-weight: 800; letter-spacing: .6px; }
+.pw-larp { background: #eeeeee; color: #7a7a7a; font-weight: 500; text-decoration: line-through; text-decoration-color: #b0b0b0; }
 .pw-unpaid { background: #f3f0e6; color: #7a6b3a; }
 .pw-unverified { background: transparent; color: #8a6d00; box-shadow: 0 0 0 1px #d8c26a inset; font-weight: 500; }
 
 /* company categories */
 .pw-cat { font-weight: 700; }
 .pw-ico { font-size: 11px; line-height: 1; }
-.pw-c-faang { background: linear-gradient(135deg, #ff4d4d, #ff9a3c); color: #fff; }
-.pw-c-faangplus { background: linear-gradient(135deg, #ff4d4d, #ff9a3c); color: #fff; box-shadow: 0 0 0 2px #ffd166 inset; }
-.pw-c-faanglite { background: #fff0e3; color: #c2560c; box-shadow: 0 0 0 1px #ffc9a0 inset; }
+.pw-c-faang { background: #fde7e4; color: #b3261e; box-shadow: 0 0 0 1px #f3b4ad inset; }
+.pw-c-faangadj { background: #fdf0ee; color: #b3261e; box-shadow: 0 0 0 1px #f3c7c2 inset; font-weight: 600; }
+.pw-c-faanglite { background: transparent; color: #b3261e; box-shadow: 0 0 0 1px #f3c7c2 inset; font-weight: 600; }
 .pw-c-ailab { background: linear-gradient(135deg, #0fb5ae, #7b61ff); color: #fff; }
 .pw-c-quant { background: #0b0f0c; color: #39ff88; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; box-shadow: 0 0 0 1px #1f7a45 inset, 0 0 8px rgba(57, 255, 136, .35); }
 .pw-c-hedge { background: linear-gradient(135deg, #0d1b3d, #1c2f63); color: #f2c94c; box-shadow: 0 0 0 1px #b8923a inset; }
@@ -53,7 +53,7 @@ html.pw-dark .pw-t-C { background: #3a3326; color: #e2cf9f; }
 html.pw-dark .pw-t-D { background: #333; color: #aaa; }
 html.pw-dark .pw-unpaid { background: #3a3526; color: #d9c98f; }
 html.pw-dark .pw-unverified { background: transparent; color: #e0c66a; box-shadow: 0 0 0 1px #6b5a1f inset; }
-html.pw-dark .pw-c-faanglite { background: #3d2616; color: #ffb27a; box-shadow: 0 0 0 1px #6b3a18 inset; }
+html.pw-dark .pw-c-faanglite { background: transparent; color: #f2a39b; box-shadow: 0 0 0 1px #5a2a26 inset; }
 html.pw-dark .pw-c-bigtech { background: #1f2c40; color: #a9c3ec; }
 html.pw-dark .pw-c-startup { background: transparent; color: #ff9a5c; box-shadow: 0 0 0 1px #7a3d18 inset; }
 html.pw-dark .pw-c-consulting { background: #1c3325; color: #9fdab4; }
@@ -64,10 +64,11 @@ html.pw-dark .pw-c-unicorn { background: linear-gradient(135deg, #5a2a6b, #3d2f7
 /* saturated chips (THANOS, S, FAANG, AI Lab, Quant, Hedge Fund, Fintech, Bank, LARP) keep their colors */
 html.pw-dark .pw-t-THANOS { background: linear-gradient(135deg, #7b2ff7, #4a0fb0); color: #fff; }
 html.pw-dark .pw-t-S { background: linear-gradient(135deg, #ffe27a, #f5b700); color: #4a3500; }
-html.pw-dark .pw-c-faang, html.pw-dark .pw-c-faangplus { background: linear-gradient(135deg, #ff4d4d, #ff9a3c); color: #fff; }
+html.pw-dark .pw-c-faang { background: #3d1c1a; color: #ff9e95; box-shadow: 0 0 0 1px #6b2c27 inset; }
+html.pw-dark .pw-c-faangadj { background: #2e1a19; color: #f2a39b; box-shadow: 0 0 0 1px #5a2a26 inset; }
 html.pw-dark .pw-c-ailab { background: linear-gradient(135deg, #0fb5ae, #7b61ff); color: #fff; }
 html.pw-dark .pw-c-quant { background: #0b0f0c; color: #39ff88; }
 html.pw-dark .pw-c-hedge { background: linear-gradient(135deg, #0d1b3d, #1c2f63); color: #f2c94c; }
 html.pw-dark .pw-c-fintech { background: linear-gradient(135deg, #10b981, #0e7490); color: #fff; }
 html.pw-dark .pw-c-bank { background: #1f3a5f; color: #e7eef8; }
-html.pw-dark .pw-larp { background: #ff5a36; color: #fff; }
+html.pw-dark .pw-larp { background: #2f2f2f; color: #9a9a9a; }
