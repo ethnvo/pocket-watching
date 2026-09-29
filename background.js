@@ -20,6 +20,36 @@ function toHourly(amount, period) {
   return period === "hour" ? a : period === "month" ? (a * 12) / HOURS_PER_YEAR : a / HOURS_PER_YEAR;
 }
 
+// The model doesn't always return clean numbers: "$185,000", "185k", "annual", "yearly"…
+function parseMoney(v) {
+  if (typeof v === "number") return v > 0 ? v : null;
+  if (typeof v !== "string") return null;
+  const m = v.replace(/[, ]/g, "").match(/\$?(\d+(?:\.\d+)?)([kKmM])?/);
+  if (!m) return null;
+  const n = parseFloat(m[1]) * ({ k: 1e3, m: 1e6 }[(m[2] || "").toLowerCase()] || 1);
+  return n > 0 ? n : null;
+}
+function normPeriod(p) {
+  const t = String(p || "").toLowerCase();
+  if (/^(hour|hr|hourly|per hour|\/hr)/.test(t)) return "hour";
+  if (/^(month|mo|monthly|per month|\/mo)/.test(t)) return "month";
+  if (/^(year|yr|yearly|annual|annually|per year|\/yr|tc)/.test(t)) return "year";
+  return null;
+}
+// No usable period: infer it from the size of the number.
+const inferPeriod = (n) => (n >= 20000 ? "year" : n >= 1500 ? "month" : n > 0 ? "hour" : null);
+
+// Normalize whatever pay shape the model returned into pay_amount + pay_period.
+function cleanPay(item) {
+  const amount = parseMoney(item.pay_amount) ?? parseMoney(item.tc) ?? parseMoney(item.total_compensation) ??
+    parseMoney(item.pay_annual) ?? parseMoney(item.pay_monthly) ?? parseMoney(item.pay_hourly);
+  if (!amount) return { ...item, pay_amount: null };
+  const period = normPeriod(item.pay_period) ||
+    (item.tc != null || item.total_compensation != null || item.pay_annual != null ? "year" : item.pay_monthly != null ? "month" : null) ||
+    inferPeriod(amount);
+  return { ...item, pay_amount: amount, pay_period: period };
+}
+
 function withPayMath(item, hourly) {
   if (item.unpaid || !hourly) return item;
   const out = { ...item, pay_hourly: round2(hourly), pay_paycheck: Math.round(hourly * HOURS_PER_PAYCHECK) };
@@ -99,7 +129,41 @@ const looksLowElite = (item) =>
   item.pay_hourly && item.pay_hourly < ELITE_INTERN_FLOOR && item.pay_scope !== "reported";
 
 function normalizePay(item) {
-  return withPayMath(item, toHourly(item.pay_amount, item.pay_period));
+  const c = cleanPay(item);
+  return withPayMath(c, toHourly(c.pay_amount, c.pay_period));
+}
+
+// No pay at all for a real, paid job → one focused deep dive. If there's no exact data,
+// the model must still give its best estimate (shown as "est. mkt").
+async function deepDivePay(item, hint, apiKey, model) {
+  if (item.unpaid || item.skip || item.pay_hourly || item.pay_annual || !(hint?.company || item.company)) return item;
+  if (/^(Student org|Volunteer|Self-employed)$/.test(item.category || "")) return item;
+  const ft = (item.employment || (item.is_internship ? "internship" : "full-time")) === "full-time";
+  const where = hint?.location ? ` in ${hint.location}` : "";
+  const prompt = `Find the pay for "${hint?.title || item.role}" at ${hint?.company || item.company}${where}.
+${ft ? `This is a full-time role: give yearly TOTAL COMPENSATION (base + annualized stock + bonus) at the new-grad/entry level unless the title says otherwise${item.level ? ` (level: ${item.level})` : ""}.` : "This is an internship/part-time role: give the hourly rate, or the monthly salary if that's how it's quoted."}
+Check Levels.fyi first, then Glassdoor/Blind submissions, then official posting ranges. Don't use modeled averages (ZipRecruiter, Salary.com, Payscale).
+If you can't find exact data, you MUST still give your best estimate for this role, level and location from comparable data — never return null for a real paid job. Set "estimate": true when it's an estimate.
+Respond with ONLY a JSON array with one object: [{"pay_amount": number, "pay_period": "hour" | "month" | "year", "level": string | null, "estimate": boolean, "pay_basis": string}] — pay_basis names the source or what the estimate is based on.`;
+  try {
+    const [r] = await callGemini(prompt, apiKey, model);
+    const c = cleanPay({ ...r });
+    const hourly = toHourly(c.pay_amount, c.pay_period);
+    if (hourly) {
+      return withPayMath(
+        {
+          ...item,
+          pay_amount: c.pay_amount,
+          pay_period: c.pay_period,
+          level: item.level || r.level || null,
+          pay_scope: r.estimate ? "market" : "company",
+          pay_basis: `${r.pay_basis || "Deep-dive search"}${r.estimate ? " (best estimate)" : ""}`,
+        },
+        hourly
+      );
+    }
+  } catch {}
+  return item;
 }
 
 // Double-check suspiciously low pay at a top company with one focused search.
@@ -124,7 +188,7 @@ Respond with ONLY a JSON array with one object: [{"pay_amount": number | null, "
   };
 }
 
-const JOB_CACHE = "v25:"; // per-entry job results (estimates); bump to re-run every lookup
+const JOB_CACHE = "v26:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -471,7 +535,10 @@ ${list}`;
     const e = misses[raw?.i];
     if (!e) continue;
     const item = await recheckLowPay(
-      medianFallback(normalizePay(checkUnicorn(applyKnownCategory(raw, e.hint?.company))), refsByKey[e.key], e.hint?.location || raw.location),
+      await deepDivePay(
+        medianFallback(normalizePay(checkUnicorn(applyKnownCategory(raw, e.hint?.company))), refsByKey[e.key], e.hint?.location || raw.location),
+        e.hint, apiKey, model
+      ),
       e.hint, apiKey, model
     );
     // "Incoming …" is announcing an offer, not LARPing — in the entry itself, or in a
