@@ -48,6 +48,11 @@ const railObs = new IntersectionObserver(
   { rootMargin: "-20% 0px -70% 0px" }
 );
 document.querySelectorAll("main section").forEach((s) => railObs.observe(s));
+// the last section can't scroll into the observer band — light it up at the bottom
+addEventListener("scroll", () => {
+  if (innerHeight + scrollY >= document.body.scrollHeight - 4)
+    railLinks.forEach((a, i) => a.classList.toggle("active", i === railLinks.length - 1));
+});
 
 // ---------- setup ----------
 chrome.storage.sync.get(["apiKey", "model"], ({ apiKey, model }) => {
@@ -262,25 +267,78 @@ chrome.storage.sync.get("badges", ({ badges = {} }) => {
   );
 });
 
-// ---------- data ----------
-const CACHE_KEY = /^(v\d+|entry|cache|edu|co\d*|pay\d*|school\d*):/;
+// ---------- data: confirmed vs estimated ----------
+const ESTIMATE_KEY = /^(v\d+|entry|cache|edu|co\d*|pay\d*|school\d*):/;
+const plural = (n, one, many = one + "s") => `${n} ${n === 1 ? one : many}`;
+
+async function countConfirmed() {
+  const { knownPay = [], knownCompanies = [] } = await chrome.storage.local.get(["knownPay", "knownCompanies"]);
+  const conf = knownPay.filter((k) => !k.reference).length;
+  const refs = knownPay.length - conf;
+  $("confirmedStat").textContent =
+    `${plural(conf, "confirmed pay entry", "confirmed pay entries")}` +
+    (refs ? `, ${plural(refs, "reference")}` : "") +
+    `, ${plural(knownCompanies.length, "company", "companies")}.`;
+}
+
 async function countCache() {
   const all = await chrome.storage.local.get(null);
-  const keys = Object.keys(all).filter((k) => CACHE_KEY.test(k));
+  const keys = Object.keys(all).filter((k) => ESTIMATE_KEY.test(k));
   const jobs = keys.filter((k) => /^v\d+:/.test(k)).length;
   const schools = keys.filter((k) => /^school\d*:/.test(k)).length;
-  const companies = keys.filter((k) => /^co\d*:/.test(k)).length;
+  const facts = keys.filter((k) => /^(co|pay)\d*:/.test(k)).length;
   $("cacheStat").textContent = keys.length
-    ? `${jobs} job${jobs === 1 ? "" : "s"}, ${schools} school${schools === 1 ? "" : "s"} and ${companies} compan${companies === 1 ? "y" : "ies"} saved.`
-    : "No saved lookups yet.";
+    ? `${plural(jobs, "job")}, ${plural(schools, "school")}, ${plural(facts, "shared fact")}.`
+    : "Nothing estimated yet.";
   return keys;
 }
+
 $("clear").onclick = async () => {
   const keys = await countCache();
   await chrome.storage.local.remove(keys);
   await countCache();
-  flash($("dataStatus"), `Cleared ${keys.length} saved lookup${keys.length === 1 ? "" : "s"}.`);
+  flash($("dataStatus"), `Cleared ${plural(keys.length, "estimate")}. Confirmed data is untouched.`);
 };
+
+$("exportConfirmed").onclick = async () => {
+  const { knownPay = [], knownCompanies = [] } = await chrome.storage.local.get(["knownPay", "knownCompanies"]);
+  const blob = new Blob([JSON.stringify({ app: "pocket-watching", version: 1, knownPay, knownCompanies }, null, 2)], { type: "application/json" });
+  const a = Object.assign(document.createElement("a"), {
+    href: URL.createObjectURL(blob),
+    download: `pocket-watching-confirmed-${new Date().toISOString().slice(0, 10)}.json`,
+  });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  flash($("dataStatus"), "Backup downloaded.");
+};
+
+$("importConfirmed").onchange = async () => {
+  const file = $("importConfirmed").files[0];
+  $("importConfirmed").value = "";
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data.knownPay)) throw new Error();
+    await upsertKnown(data.knownPay);
+    if (Array.isArray(data.knownCompanies)) {
+      const { knownCompanies = [] } = await chrome.storage.local.get("knownCompanies");
+      for (const c of data.knownCompanies) {
+        const i = knownCompanies.findIndex((k) => norm(k.company) === norm(c.company));
+        if (i >= 0) knownCompanies[i] = c; else knownCompanies.push(c);
+      }
+      await chrome.storage.local.set({ knownCompanies });
+    }
+    countConfirmed();
+    flash($("dataStatus"), `Restored ${plural(data.knownPay.length, "pay entry", "pay entries")}.`);
+  } catch {
+    flash($("dataStatus"), "That file isn't a Pocket Watching backup.", "err", 6000);
+  }
+};
+
+chrome.storage.onChanged?.addListener((ch, area) => {
+  if (area === "local" && (ch.knownPay || ch.knownCompanies)) countConfirmed();
+});
 
 renderKnown();
 countCache();
+countConfirmed();

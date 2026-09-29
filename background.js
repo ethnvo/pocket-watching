@@ -222,7 +222,11 @@ async function lookup(entries, profile) {
     sharedKeys.push(coKey(h.company), payKey(h.company, h.title, h.location, intern));
   }
   const shared = sharedKeys.length ? await chrome.storage.local.get(sharedKeys) : {};
-  const facts = Object.values(shared)
+  // Two kinds of facts, kept apart so a past guess is never passed off as confirmed:
+  //   confirmed — from you (Known pay, known companies): exact, permanent
+  //   estimated — learned from earlier Gemini lookups: expire, may be wrong
+  const confirmed = [];
+  const facts = Object.values(shared) // estimated
     .filter((v) => v && Date.now() - v.at < SHARED_TTL_MS)
     .map((v) => v.fact);
   // Same company + title in other locations: known pay rows + pay learned from earlier lookups.
@@ -249,20 +253,27 @@ async function lookup(entries, profile) {
     if (!exact && us.length) {
       refsByKey[e.key] = us;
       const where = h.location ? `in ${h.location}` : "for this entry's location";
-      facts.push(
-        `Reference pay for "${h.title}" at ${h.company} (pay varies by location, so look up the figure ${where} specifically): ` +
-        us.map((x) => `${x.location}: ${x.period === "month" ? `$${Math.round((x.hourly * HOURS_PER_YEAR) / 12)}/month` : x.period === "year" ? `$${Math.round(x.hourly * HOURS_PER_YEAR)}/yr` : `$${x.hourly}/hr`}${x.housing ? ` + $${x.housing}/month housing` : ""}${x.src === "unconfirmed" ? " (unconfirmed secondhand report)" : ""}`).join("; ") + "."
-      );
+      const fmt = (x) =>
+        `${x.location}: ${x.period === "month" ? `$${Math.round((x.hourly * HOURS_PER_YEAR) / 12)}/month` : x.period === "year" ? `$${Math.round(x.hourly * HOURS_PER_YEAR)}/yr` : `$${x.hourly}/hr`}${x.housing ? ` + $${x.housing}/month housing` : ""}`;
+      const head = `Pay for "${h.title}" at ${h.company} elsewhere (pay varies by location — look up the figure ${where} specifically): `;
+      const conf = us.filter((x) => x.src === "reported");
+      const est = us.filter((x) => x.src !== "reported");
+      if (conf.length) confirmed.push(head + conf.map(fmt).join("; ") + ".");
+      if (est.length) facts.push(head + est.map((x) => fmt(x) + (x.src === "unconfirmed" ? " (unconfirmed secondhand report)" : " (earlier estimate)")).join("; ") + ".");
     }
     if (exact) {
-      facts.push(`${exact.company}${exact.role ? ` (${exact.role})` : ""}${exact.location ? ` in ${exact.location}` : ""}: pay is ${exact.hourly ? `$${exact.hourly}/hr` : exact.monthly ? `$${exact.monthly}/month` : `$${exact.annual}/yr`} — reported directly, exact.`);
+      confirmed.push(`${exact.company}${exact.role ? ` (${exact.role})` : ""}${exact.location ? ` in ${exact.location}` : ""}: pay is ${exact.hourly ? `$${exact.hourly}/hr` : exact.monthly ? `$${exact.monthly}/month` : `$${exact.annual}/yr`}.`);
     }
     const kc = findKnownCompany(knownCompanies, e.hint?.company);
-    if (kc?.note) facts.push(`${kc.company}: ${kc.note}`);
+    if (kc?.note) confirmed.push(`${kc.company}: ${kc.note}`);
   }
-  const knownFacts = facts.length
-    ? `KNOWN FACTS from earlier lookups — trust these and don't search for them again:\n${facts.map((f) => "- " + f).join("\n")}\n\n`
-    : "";
+  const knownFacts =
+    (confirmed.length
+      ? `CONFIRMED by the user — exact, use as-is:\n${confirmed.map((f) => "- " + f).join("\n")}\n\n`
+      : "") +
+    (facts.length
+      ? `EARLIER ESTIMATES from past lookups — probably right but NOT confirmed; use them to save searching, but prefer better data if you have it:\n${facts.map((f) => "- " + f).join("\n")}\n\n`
+      : "");
 
   const today = new Date().toISOString().slice(0, 10);
   const prompt = `Today is ${today}. Below are job entries scraped from the Experience section of a LinkedIn profile, plus the person's headline and Education section. For EACH entry:

@@ -100,12 +100,28 @@
 
       <section id="data">
         <h2>Data</h2>
-        <p class="hint">Lookups are saved so profiles you revisit load instantly. Your key, Known pay and badge choices are never cleared.</p>
-        <p class="stat" id="cacheStat">Counting saved lookups…</p>
-        <div class="actions">
-          <button id="clear" class="ghost danger" type="button">Clear saved lookups</button>
-          <span id="dataStatus" class="status" role="status"></span>
+        <p class="hint">Pocket Watching keeps two separate stores. Clearing estimates never touches what you've confirmed.</p>
+        <div class="stores">
+          <div class="store">
+            <h3><span class="dot confirmed"></span>Confirmed</h3>
+            <p class="store-desc">Pay and companies you entered. Permanent: never expires, never cleared. Always wins over estimates.</p>
+            <p class="stat" id="confirmedStat">…</p>
+            <div class="actions">
+              <button id="exportConfirmed" class="ghost" type="button">Export backup</button>
+              <label class="ghost button-like" for="importConfirmed">Restore backup</label>
+              <input id="importConfirmed" type="file" accept="application/json,.json" hidden>
+            </div>
+          </div>
+          <div class="store">
+            <h3><span class="dot estimated"></span>Estimated</h3>
+            <p class="store-desc">What Gemini found. Jobs and schools refresh after 14 days, shared company and pay facts after 30.</p>
+            <p class="stat" id="cacheStat">…</p>
+            <div class="actions">
+              <button id="clear" class="ghost danger" type="button">Clear estimates</button>
+            </div>
+          </div>
         </div>
+        <p id="dataStatus" class="status" role="status"></p>
       </section>
     </main>
   </div>
