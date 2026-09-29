@@ -15,6 +15,9 @@
 .pw-check svg { display: block; }
 .pw-dim { color: #7a8591; font-weight: 500; }
 .pw-pay .pw-housing { background: #eef4fb; color: #2f5a8a; font-weight: 600; }
+/* market estimate (no company data): grey, dashed — reads as "rough guess" next to the green chips */
+.pw-pay-est { background: #f1f2f4; color: #56606b; border: 1px dashed #aab2bb; padding: 3px 7px; }
+.pw-pay-est .pw-dim { color: #7a8591; }
 .pw-dim { color: #4f8a64; }
 .pw-wait { color: #7a8591; font-weight: 500; }
 .pw-more { background: #fff4d6; color: #8a5a00; cursor: pointer; font-weight: 700; }
@@ -26,7 +29,7 @@ html.pw-dark .pw-more { background: #3a3019; color: #f0c870; }
 
 /* tiers */
 .pw-tier { letter-spacing: .3px; }
-/* THANOS: overwhelming power — Mad Titan purple with a gauntlet-gold edge */
+/* THANOS: the rarest seats — Mad Titan purple with a gauntlet-gold edge */
 .pw-t-THANOS {
   background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 55%, #4c1d95 100%);
   color: #fff; font-weight: 800; letter-spacing: .9px;
@@ -95,6 +98,8 @@ html.pw-dark .pw-yc { background: #3a2216; color: #ffb38a; }
 /* LinkedIn dark theme (detected from the page background, not the OS setting) */
 html.pw-dark .pw-chip { background: #2a2f36; color: #d5dbe1; }
 html.pw-dark .pw-pay { background: #1c3a27; color: #8fe0aa; }
+html.pw-dark .pw-pay-est { background: #2a2f36; color: #b4bcc5; border-color: #5a626b; }
+html.pw-dark .pw-pay-est .pw-dim { color: #8a939d; }
 html.pw-dark .pw-housing { background: #1c2a3d; color: #a8c4ea; }
 html.pw-dark .pw-ten-early { background: #1c3a27; color: #8fe0aa; }
 html.pw-dark .pw-ten-ontime { background: transparent; color: #aab2bb; box-shadow: 0 0 0 1px #3d434a inset; }
