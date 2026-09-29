@@ -386,6 +386,19 @@
     return r.is_internship ? "internship" : "full-time";
   }
 
+  // "Skyryse is valued at $1.15B after a $300M Series C (Feb 2026). Source: TechCrunch"
+  function fundingTip(r, name) {
+    const co = r.company || "This company";
+    const round = r.round_name
+      ? `${r.round_amount ? `a ${fmtValuation(r.round_amount)} ` : "a "}${r.round_name}${r.round_date ? ` (${r.round_date})` : ""}`
+      : "";
+    const line = r.valuation
+      ? `${co} is valued at ${fmtValuation(r.valuation)}${round ? ` after ${round}` : ""}.`
+      : `${co} raised ${round}.`;
+    const lead = name === "Unicorn" ? "Unicorn: a private startup valued at $1B+.\n\n" : "";
+    return `${lead}${line}${r.valuation_source ? `\nSource: ${r.valuation_source}` : ""}`;
+  }
+
   function fmtValuation(n) {
     return n >= 1e9 ? `$${(n / 1e9).toFixed(n >= 1e10 ? 0 : 2).replace(/\.?0+$/, "")}B` : `$${Math.round(n / 1e6)}M`;
   }
@@ -496,11 +509,9 @@
     const c = CATEGORIES[name] || { cls: "plain", icon: "" };
     // Funding round only means something for regular startups; a unicorn is just $1B+.
     const label = name === "Startup" && r.stage ? `${r.stage} startup` : name === "University" ? "University position" : name;
-    const tip =
-      name === "Unicorn" && r.valuation
-        ? `Unicorn: a private startup valued at $1B+.\n\nValued at ${fmtValuation(r.valuation)}${r.valuation_source ? ` · ${r.valuation_source}` : ""}.`
-        : CATEGORY_TIPS[name];
-    return `<span class="pw-chip pw-cat pw-c-${c.cls}"${tip ? ` data-tip="${esc(tip)}"` : ""}>${c.icon ? `<span class="pw-ico">${c.icon}</span>` : ""}<span class="pw-lbl">${esc(label)}</span></span>`;
+    const tip = (name === "Unicorn" || name === "Startup") && (r.valuation || r.round_name) ? fundingTip(r, name) : CATEGORY_TIPS[name];
+    const val = name === "Unicorn" && r.valuation ? ` <span class="pw-dim">${fmtValuation(r.valuation)}</span>` : "";
+    return `<span class="pw-chip pw-cat pw-c-${c.cls}"${tip ? ` data-tip="${esc(tip)}"` : ""}>${c.icon ? `<span class="pw-ico">${c.icon}</span>` : ""}<span class="pw-lbl">${esc(label)}</span>${val}</span>`;
   }
 
   // ---------- utils ----------

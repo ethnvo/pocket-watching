@@ -90,7 +90,7 @@ function normalizePay(item) {
   return out;
 }
 
-const JOB_CACHE = "v19:"; // per-entry job results (estimates); bump to re-run every lookup
+const JOB_CACHE = "v20:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -373,7 +373,7 @@ E) CATEGORY — pick exactly one:
   "Hedge Fund" = hedge funds & multi-managers: Citadel, Two Sigma, DE Shaw, Bridgewater, Millennium, Point72, Renaissance.
   "Fintech" = payments/financial tech: Visa, Mastercard, PayPal, Block, Plaid, Ramp, Brex, Chime, Affirm.
   "Big Tech" = large established tech not above: Oracle, IBM, Salesforce, Adobe, Intel, Cisco, AMD, Qualcomm, ServiceNow, Workday.
-  "Unicorn" = private startup with a REPORTED valuation of $1B+ (from a funding announcement or reliable press) and not listed above. Only use it if you can state the valuation and its source in valuation / valuation_source; otherwise use "Startup".
+  "Unicorn" = private startup with a REPORTED valuation of $1B+ (from a funding announcement or reliable press) and not listed above. Only use it if you can state the valuation and its source (valuation, valuation_source, plus round_name / round_amount / round_date); otherwise use "Startup". For funded startups, fill in the round fields too when you find them.
   "Startup" = other startups (set stage when known). A publicly traded company is NEVER a startup, however young (e.g. Rivian, Lucid, Robinhood, Coinbase are public); neither is a company with thousands of employees.
   Clubs, associations, societies, chapters, design/project teams and anything named "<thing> at <University>" (e.g. "Unmanned Aerial Vehicles at UCI") are "Student org" — never a startup.
   "Bank", "Consulting", "Defense", "Public co" (other public companies), "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed".
@@ -400,7 +400,10 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, in th
   "category": string,
   "stage": string | null,
   "valuation": number | null,          // latest reported valuation in USD (Unicorn requires it), e.g. 1150000000
-  "valuation_source": string | null,   // e.g. "Series C, Feb 2026 (TechCrunch)"
+  "round_name": string | null,         // latest funding round, e.g. "Series C" (startups/unicorns)
+  "round_amount": number | null,       // USD raised in that round, e.g. 300000000
+  "round_date": string | null,         // e.g. "Feb 2026"
+  "valuation_source": string | null,   // where the valuation/round was reported, e.g. "TechCrunch"
   "yc_batch": string | null,           // Y Combinator batch if it's a YC company, e.g. "W24", "S25"; else null
   "larp": boolean,
   "larp_reason": string | null,
