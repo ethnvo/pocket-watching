@@ -50,7 +50,16 @@ function cleanPay(item) {
   return { ...item, pay_amount: amount, pay_period: period };
 }
 
+// Estimated housing above these is a bad source (top big-tech stipends are ~$4K/mo).
+const HOUSING_MAX = { month: 5000, total: 12000 };
+const saneHousing = (item) => {
+  if (!item.housing_amount || /^(reported|community|edited)$/.test(item.housing_scope || "")) return item;
+  const max = HOUSING_MAX[item.housing_period === "month" ? "month" : "total"];
+  return Number(item.housing_amount) > max ? { ...item, housing_amount: null, housing_period: null } : item;
+};
+
 function withPayMath(item, hourly) {
+  item = saneHousing(item);
   if (item.unpaid || !hourly) return item;
   const out = { ...item, pay_hourly: round2(hourly), pay_paycheck: Math.round(hourly * HOURS_PER_PAYCHECK) };
   if (item.is_internship) {
@@ -545,7 +554,7 @@ B) PAY. Rules, in priority order:
   1. Use COMPANY-SPECIFIC pay for that role first, in this order of trust: Levels.fyi (incl. intern pages) > Glassdoor / Blind submissions for that exact role > the company's official posting range > H-1B/LCA data > Indeed. NEVER use modeled "average" estimators (ZipRecruiter, Salary.com, Payscale, Comparably, "annual pay ÷ 2080" figures) — they're usually far too low. Engineering interns at top tech companies typically make $40–60+/hr. Big tech intern pay is well documented (e.g. Amazon SDE interns in Seattle earn roughly $50-60/hr) — do NOT substitute a generic market "intern median" when company data exists.
   2. Only if no company data exists, use the market median for that title in that metro, and set pay_scope to "market".
   3. Report the pay figure exactly as your source quotes it — don't convert it yourself. Set pay_amount to that number and pay_period to "hour", "month" or "year" (e.g. an intern salary quoted as $9,000/month → pay_amount 9000, pay_period "month"). Conversions are done downstream.
-  3b. Internship HOUSING: if the company gives a housing stipend/relocation for interns, set housing_amount and housing_period ("month" for a monthly stipend, "total" for a lump sum). Big tech usually does (e.g. a monthly housing stipend or a lump sum). If none or unknown, null.
+  3b. Internship HOUSING: if the company gives a housing stipend/relocation for interns, set housing_amount and housing_period ("month" for a monthly stipend, "total" for a lump sum). Big tech usually does (e.g. a monthly housing stipend or a lump sum). Typical: monthly stipends $2–4K/mo, lump sums $3–9K for the whole internship. Only give a figure you have a source for; if none or unknown, null — never guess.
   4. Full-time: report median TOTAL COMPENSATION per year (TC = base + annualized stock + bonus) as pay_amount with pay_period "year". Assume the NEW-GRAD / entry level unless the title states a higher one (Senior, Staff, Principal, Lead, II/III, …). Put the company's level name in "level" (e.g. Meta E3, Google L3, Amazon SDE I, Microsoft 59, Apple ICT2, Netflix L4). Levels.fyi is the best source. Sanity anchors (US TC): Meta E3 ≈ $185–195K, E4 ≈ $250–290K; Google L3 ≈ $185–205K, L4 ≈ $255–295K; Amazon SDE I ≈ $160–190K, SDE II ≈ $220–280K. Several roles at the SAME company are usually promotions: the earlier role's TC must be LOWER than the later one's. Internships: never annualize.
   4b. Part-time, contract and on-campus/university jobs: hourly pay (pay_period "hour").
   5. Founder/self-employed/volunteer/unpaid: pay fields null, explain in pay_basis.

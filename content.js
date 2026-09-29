@@ -425,7 +425,7 @@
       const refining = r.refining ? ` <span class="pw-dim" data-tip="Double-checking this number…">checking…</span>` : "";
       chips.push(`<span class="pw-chip pw-pay${r.pay_scope === "market" ? " pw-pay-est" : ""}" data-tip="${esc(payTip)}">${parts.filter(Boolean).join(" ")}${scope}${check}${refining}</span>`);
       if (badges.housing && r.is_internship && r.housing_amount) {
-        const h = r.housing_period === "month" ? `${money(r.housing_amount, cur, 0)}/mo` : money(r.housing_amount, cur, 0);
+        const h = r.housing_period === "month" ? `${money(r.housing_amount, cur, 0)}/mo` : `${money(r.housing_amount, cur, 0)} lump sum`;
         // Housing is labeled on its own: its number can come from a different place than the pay.
         const hs = r.housing_scope || r.pay_scope;
         const kind = r.housing_period === "month" ? "monthly" : "lump sum";
