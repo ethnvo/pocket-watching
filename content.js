@@ -12,10 +12,30 @@
   let lastError = null;         // global errors only (e.g. no API key)
   const errors = new Map();    // entry key -> error message
   let scanTimer = null;
-  let showTiers = false;       // Settings → "Show prestige tiers" (off by default)
-  chrome.storage.sync.get("showTiers", (v) => { showTiers = !!v.showTiers; scheduleScan(); });
+  // Tiers only ever show as a compliment.
+  const SHOWN_TIERS = new Set(["THANOS", "S", "A"]);
+
+  // Settings → Badges (all on by default).
+  const DEFAULT_BADGES = { category: true, pay: true, housing: true, verified: true, unverified: true, larp: true, tenure: true, school: true, tiers: true };
+  let badges = { ...DEFAULT_BADGES };
+  let badgesKey = "";
+  const loadBadges = (v) => {
+    badges = { ...DEFAULT_BADGES, ...(v || {}) };
+    badgesKey = JSON.stringify(badges);
+    scheduleScan();
+  };
+  chrome.storage.sync.get("badges", (v) => loadBadges(v.badges));
   chrome.storage.onChanged.addListener((ch, area) => {
-    if (area === "sync" && "showTiers" in ch) { showTiers = !!ch.showTiers.newValue; scheduleScan(); }
+    if (area === "sync" && ch.badges) loadBadges(ch.badges.newValue);
+  });
+
+  // Import tabs (opened by Settings → Import) just scrape the jobs and report back.
+  let importMode = null;
+  let modeKnown = false; // don't start lookups until we know this isn't an import tab
+  chrome.runtime.sendMessage({ type: "pw:isImportTab" }, (yes) => {
+    importMode = !!yes && !chrome.runtime.lastError ? { lastCount: -1, stableSince: 0 } : null;
+    modeKnown = true;
+    scheduleScan();
   });
   let lastSlug = null;
   let firstSeenAt = 0;         // when experience entries first appeared on this page
@@ -30,8 +50,9 @@
   }
 
   async function scan() {
-    if (!location.pathname.startsWith("/in/")) return;
+    if (!modeKnown || !location.pathname.startsWith("/in/")) return;
     const entries = findEntries();
+    if (importMode) return importScan(entries);
     if (!entries.length || slug() !== lastSlug) {
       lastSlug = slug();
       firstSeenAt = 0;
@@ -60,6 +81,27 @@
       }
     }
     missing.forEach((e) => lookup(e, ctx));
+  }
+
+  function importScan(entries) {
+    const jobs = entries.filter((e) => e.kind === "exp");
+    const now = Date.now();
+    if (jobs.length !== importMode.lastCount) {
+      importMode.lastCount = jobs.length;
+      importMode.stableSince = now;
+    }
+    // wait until the list has stopped growing for 2s
+    if (!jobs.length || now - importMode.stableSince < 2000) return void setTimeout(scheduleScan, 700);
+    const name = document.title.split("|")[0].replace(/^\(\d+\)\s*/, "").trim();
+    const data = {
+      name,
+      jobs: jobs.map((e) => {
+        const h = parseHint(e);
+        return { ...h, dates: e.dateEl.textContent.trim() };
+      }),
+    };
+    importMode = null;
+    chrome.runtime.sendMessage({ type: "pw:imported", data });
   }
 
   // One request per entry so each badge fills in as soon as its own search finishes.
@@ -183,6 +225,15 @@
     if (!row) {
       row = document.createElement("div");
       row.className = "pw-row";
+      // Each LinkedIn entry is one big link: keep badge clicks/drags from navigating
+      // so the text can be selected.
+      row.setAttribute("draggable", "false");
+      row.addEventListener("click", (ev) => {
+        if (ev.target.closest(".pw-err")) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+      });
+      row.addEventListener("dragstart", (ev) => ev.preventDefault());
       block.append(row);
     }
     return row;
@@ -190,29 +241,31 @@
 
   function render(e, r, tenure) {
     const row = rowFor(e);
-    const sig = r ? `done|${showTiers}${tenure ? "|" + tenure.label : ""}` : "loading";
+    const sig = r ? `done|${badgesKey}${tenure ? "|" + tenure.label : ""}` : "loading";
     if (row.dataset.sig === sig) return;
     row.dataset.sig = sig;
     if (!r) {
       row.innerHTML = `<span class="pw-chip pw-wait"><span class="pw-spin"></span>${e.kind === "edu" ? "checking school…" : "checking pockets…"}</span>`;
       return;
     }
-    if (e.kind === "edu") return void (row.innerHTML = eduChips(r) + tenureChip(tenure));
+    if (e.kind === "edu") return void (row.innerHTML = eduChips(r) + (badges.tenure ? tenureChip(tenure) : ""));
     const cur = r.currency || "USD";
     const chips = [];
     const tier = String(r.tier || "").toUpperCase();
-    if (showTiers && TIER_LABELS[tier]) {
+    if (badges.tiers && SHOWN_TIERS.has(tier)) {
       chips.push(`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`);
     }
-    if (r.larp) {
+    if (badges.larp && r.larp) {
       chips.push(`<span class="pw-chip pw-larp" title="${esc(r.larp_reason || "Listed as a full-time title while still in school")}">LARP</span>`);
     }
-    const cat = categoryChip(r);
+    const cat = badges.category ? categoryChip(r) : "";
     if (cat) chips.push(cat);
-    if (r.verified === false) {
+    if (badges.unverified && r.verified === false) {
       chips.push(`<span class="pw-chip pw-unverified" title="${esc(r.verify_note || "Couldn't confirm this company/role or its pay online")}">unverified</span>`);
     }
-    if (r.unpaid) {
+    if (!badges.pay) {
+      // pay badges off
+    } else if (r.unpaid) {
       chips.push(`<span class="pw-chip pw-unpaid" title="${esc(r.pay_basis || "")}">unpaid</span>`);
     } else if (r.pay_hourly || r.pay_annual) {
       const parts = r.is_internship
@@ -221,14 +274,14 @@
           : [hourlyStr(r.pay_hourly, cur) + "/hr"]
         : [money(r.pay_annual, cur, 0, true) + "/yr", r.pay_hourly ? hourlyStr(r.pay_hourly, cur) + "/hr" : null];
       const scope = r.pay_scope === "market" ? ` <span class="pw-dim">mkt</span>` : "";
-      const check = r.verified ? verifiedCheck(r.pay_scope === "reported" ? "Verified — pay you entered in Known pay" : "Verified — company and pay confirmed") : "";
+      const check = badges.verified && r.verified ? verifiedCheck(r.pay_scope === "reported" ? "Verified — pay you entered in Known pay" : "Verified — company and pay confirmed") : "";
       const payTip = r.pay_period === "month"
         ? `${r.pay_basis || ""}\nMonthly salary. The hourly figure is just an equivalent for comparing (salary × 12 ÷ 2080 hrs).`
         : r.pay_basis || "";
-      chips.push(`<span class="pw-chip pw-pay" title="${esc(payTip)}">${parts.filter(Boolean).join(" · ")}${scope}${check}</span>`);
-      if (r.is_internship && r.housing_amount) {
+      chips.push(`<span class="pw-chip pw-pay" title="${esc(payTip)}">${parts.filter(Boolean).join(" ")}${scope}${check}</span>`);
+      if (badges.housing && r.is_internship && r.housing_amount) {
         const h = r.housing_period === "month" ? `${money(r.housing_amount, cur, 0)}/mo` : money(r.housing_amount, cur, 0);
-        chips.push(`<span class="pw-chip pw-housing" title="Housing stipend${r.housing_period === "month" ? " (monthly)" : " (lump sum)"}">🏠 +${h} housing</span>`);
+        chips.push(`<span class="pw-chip pw-housing" title="Housing stipend${r.housing_period === "month" ? " (monthly)" : " (lump sum)"}">🏠 ${h} housing</span>`);
       }
     } else if (r.pay_basis) {
       chips.push(`<span class="pw-chip pw-dim" title="${esc(r.pay_basis)}">pay n/a</span>`);
@@ -260,8 +313,8 @@
   function eduChips(r) {
     const tier = String(r.tier || "").toUpperCase();
     if (!TIER_LABELS[tier]) return ""; // high school, certificates, etc.
-    const chips = showTiers ? [`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`] : [];
-    if (r.label) chips.push(`<span class="pw-chip pw-cat pw-c-school"><span class="pw-ico">🎓</span>${esc(r.label)}</span>`);
+    const chips = badges.tiers && SHOWN_TIERS.has(tier) ? [`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`] : [];
+    if (badges.school && r.label) chips.push(`<span class="pw-chip pw-cat pw-c-school"><span class="pw-ico">🎓</span>${esc(r.label)}</span>`);
     return chips.join("");
   }
 
@@ -348,7 +401,7 @@
     const c = CATEGORIES[name] || { cls: "plain", icon: "" };
     // Funding round only means something for regular startups; a unicorn is just $1B+.
     const label = name === "Startup" && r.stage ? `${r.stage} startup` : name;
-    return `<span class="pw-chip pw-cat pw-c-${c.cls}">${c.icon ? `<span class="pw-ico">${c.icon}</span>` : ""}${esc(label)}</span>`;
+    return `<span class="pw-chip pw-cat pw-c-${c.cls}">${c.icon ? `<span class="pw-ico">${c.icon}</span>` : ""}<span class="pw-lbl">${esc(label)}</span></span>`;
   }
 
   // ---------- utils ----------

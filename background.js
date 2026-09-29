@@ -90,6 +90,14 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "pw:options") return void chrome.runtime.openOptionsPage();
+  if (msg?.type === "pw:isImportTab") return void sendResponse(importWaiters.has(_sender.tab?.id));
+  if (msg?.type === "pw:imported") return void importWaiters.get(_sender.tab?.id)?.(msg.data);
+  if (msg?.type === "pw:import") {
+    importProfile(msg.url)
+      .then((data) => sendResponse({ ok: true, data }))
+      .catch((err) => sendResponse({ ok: false, error: String(err?.message || err) }));
+    return true;
+  }
   if (msg?.type !== "pw:lookup") return;
   const job = msg.kind === "edu" ? () => lookupEdu(msg.entries) : () => lookup(msg.entries, msg.profile || {});
   limited(job)
@@ -97,6 +105,32 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     .catch((err) => sendResponse({ ok: false, error: String(err?.message || err) }));
   return true; // async response
 });
+
+// ---------- Import a profile's jobs (for filling in Known pay) ----------
+// Opens the profile's Experience page in a background tab; the content script sees
+// it's an import tab, scrapes the entries (no Gemini calls) and reports back.
+const importWaiters = new Map(); // tabId -> resolve(data)
+
+async function importProfile(url) {
+  const slug = String(url || "").match(/linkedin\.com\/in\/([^/?#]+)/i)?.[1];
+  if (!slug) throw new Error("That isn't a LinkedIn profile link. It should look like linkedin.com/in/username.");
+  const tab = await chrome.tabs.create({ url: `https://www.linkedin.com/in/${slug}/details/experience/`, active: false });
+  return new Promise((resolve, reject) => {
+    const done = () => {
+      clearTimeout(timer);
+      importWaiters.delete(tab.id);
+      chrome.tabs.remove(tab.id).catch(() => {});
+    };
+    const timer = setTimeout(() => {
+      done();
+      reject(new Error("The profile didn't load within 40 seconds. Check that you're signed in to LinkedIn and try again."));
+    }, 40000);
+    importWaiters.set(tab.id, (data) => {
+      done();
+      resolve(data);
+    });
+  });
+}
 
 // Cap concurrent Gemini calls so a long profile doesn't trip free-tier rate limits.
 const MAX_CONCURRENT = 5;
@@ -121,11 +155,11 @@ function pump() {
 
 async function lookup(entries, profile) {
   const results = {};
-  const keys = entries.map((e) => `v9:${e.key}`);
+  const keys = entries.map((e) => `v10:${e.key}`);
   const cached = await chrome.storage.local.get(keys);
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`v9:${e.key}`];
+    const hit = cached[`v10:${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
@@ -182,10 +216,10 @@ B) PAY. Rules, in priority order:
   5. Founder/self-employed/volunteer/unpaid: pay fields null, explain in pay_basis.
 
 C) PRESTIGE TIER — how impressive/selective THIS SPECIFIC ROLE at THIS company is. The role matters as much as the company: rate the seat, not the logo.
-  THANOS = the absolute peak: core roles at top quant/HFT/prop firms (Jane Street, Citadel/Citadel Securities, Hudson River Trading, Jump, Two Sigma, DE Shaw, Optiver, IMC, SIG, Five Rings, Radix, Tower) — quant trader, quant researcher, quant dev, SWE; research scientist/engineer at frontier AI labs (OpenAI, Anthropic, Google DeepMind); FOUNDING ENGINEER / first engineers at a legit, VC-backed startup (YC, a16z, Sequoia, etc.) — that seat beats a regular SWE job at big tech.
-  S = elite & hyper-selective: SWE/eng at frontier AI labs or the hottest top startups, MBB consulting, elite rotational APM programs (Google APM, Meta RPM), top-bucket IB.
-  A = strong, selective core roles at Big Tech / top unicorns: SWE/ML/eng at Google, Meta, Apple, Nvidia, Netflix, Microsoft, Stripe, Databricks, etc.
-  B = good but not elite: Amazon SDE/SWE (high-volume hiring, less selective than the rest of FAANG), non-core or less-selective roles at big tech (a PM or program-manager internship at Amazon is B or lower), core roles at well-known large companies (Visa, Salesforce, Adobe, big banks' tech), Big 4.
+  THANOS = reserved for the truly insane. Mainly core roles at top quant/HFT/prop firms (Jane Street, Citadel/Citadel Securities, Hudson River Trading, Jump, Two Sigma, DE Shaw, Optiver, IMC, SIG, Five Rings, Radix, Tower) — quant trader, researcher, dev, SWE. Beyond quant, only seats that are rarer still: research scientist at a frontier AI lab (OpenAI, Anthropic, Google DeepMind), founding engineer at a top-tier-backed startup (YC / a16z / Sequoia with real traction). Use it sparingly.
+  S = elite & hyper-selective: engineering at frontier AI labs or the hottest top startups, MBB consulting, elite rotational APM programs (Google APM, Meta RPM), top-bucket IB.
+  A = the FAANG / FAANG+ group — core engineering/ML roles at Google, Meta, Apple, Amazon, Netflix, Microsoft, Nvidia, Snowflake, Databricks, Stripe, Palantir, and peers of that caliber.
+  B = good but not elite: non-core roles at big tech (PM or program-manager internships), core roles at well-known large companies (Visa, Salesforce, Adobe, big banks' tech), Big 4.
   MID = decent, RECOGNIZABLE companies: established mid-size/large companies people have heard of, regional names, defense primes, well-funded startups with a real brand. Being verified to exist is not enough — small or obscure private companies and early startups are C.
   C = the DEFAULT for any company that isn't well known — small/lesser-known startups and companies, anything you can't verify — unless a role bump below applies. Also a peripheral role anywhere.
   D = non-selective or unrelated role (e.g. retail, food service) or clearly fake/placeholder company.
@@ -252,7 +286,7 @@ ${list}`;
     const item = e ? normalizePay(raw) : raw;
     if (!e) continue;
     results[e.key] = item;
-    toStore[`v9:${e.key}`] = { at: Date.now(), data: item };
+    toStore[`v10:${e.key}`] = { at: Date.now(), data: item };
 
     // Feed the shared cache (keyed on the scraped hint so the next lookup can find it).
     const h = e.hint || {};

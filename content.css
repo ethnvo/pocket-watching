@@ -1,5 +1,6 @@
 .pw-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; font: 600 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-.pw-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px; background: #eef1f4; color: #38434f; white-space: nowrap; cursor: default; }
+.pw-row { user-select: text; -webkit-user-select: text; -webkit-user-drag: none; cursor: auto; }
+.pw-chip { user-select: text; -webkit-user-select: text; display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px; background: #eef1f4; color: #38434f; white-space: nowrap; cursor: text; }
 .pw-pay { background: #e3f4e8; color: #1d6b3a; font-variant-numeric: tabular-nums; }
 .pw-housing { background: #eef4fb; color: #2f5a8a; font-weight: 600; }
 .pw-check { display: inline-flex; margin-left: 2px; }
@@ -14,7 +15,13 @@
 
 /* tiers */
 .pw-tier { letter-spacing: .3px; }
-.pw-t-THANOS { background: linear-gradient(135deg, #7b2ff7, #4a0fb0); color: #fff; box-shadow: 0 0 0 1px #9d5cff inset, 0 0 10px rgba(140, 70, 255, .55); letter-spacing: .8px; font-weight: 800; }
+/* THANOS: overwhelming power — Mad Titan purple with a gauntlet-gold edge */
+.pw-t-THANOS {
+  background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 55%, #4c1d95 100%);
+  color: #fff; font-weight: 800; letter-spacing: .9px;
+  box-shadow: 0 0 0 1.5px #e3b341 inset, 0 0 12px rgba(124, 58, 237, .45);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .25);
+}
 .pw-t-S { background: linear-gradient(135deg, #ffe27a, #f5b700); color: #4a3500; box-shadow: 0 0 0 1px #e0a800 inset; }
 .pw-t-A { background: #e4e9ff; color: #2d3fb0; }
 .pw-t-B { background: #e2f3f8; color: #146a82; }
@@ -37,7 +44,16 @@
 /* company categories */
 .pw-cat { font-weight: 700; }
 .pw-ico { font-size: 11px; line-height: 1; }
-.pw-c-faang { background: #fde7e4; color: #b3261e; box-shadow: 0 0 0 1px #f3b4ad inset; }
+/* FAANG: gradient hairline + gradient lettering — sharp, not loud */
+.pw-c-faang {
+  border: 1px solid transparent;
+  background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #e53935, #fb8c00, #8e24aa) border-box;
+  padding: 3px 8px;
+}
+.pw-c-faang .pw-lbl, .pw-c-faang .pw-ico {
+  background: linear-gradient(120deg, #d32f2f, #ef6c00 55%, #8e24aa);
+  -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800; letter-spacing: .4px;
+}
 .pw-c-faangadj { background: #fdf0ee; color: #b3261e; box-shadow: 0 0 0 1px #f3c7c2 inset; font-weight: 600; }
 .pw-c-faanglite { background: transparent; color: #b3261e; box-shadow: 0 0 0 1px #f3c7c2 inset; font-weight: 600; }
 .pw-c-ailab { background: linear-gradient(135deg, #0fb5ae, #7b61ff); color: #fff; }
@@ -78,9 +94,10 @@ html.pw-dark .pw-c-school { background: #1c2a3d; color: #a8c4ea; }
 html.pw-dark .pw-c-plain { background: transparent; color: #aab2bb; box-shadow: 0 0 0 1px #3d434a inset; }
 html.pw-dark .pw-c-unicorn { background: linear-gradient(135deg, #5a2a6b, #3d2f7a); color: #f0d6ff; }
 /* saturated chips (THANOS, S, FAANG, AI Lab, Quant, Hedge Fund, Fintech, Bank, LARP) keep their colors */
-html.pw-dark .pw-t-THANOS { background: linear-gradient(135deg, #7b2ff7, #4a0fb0); color: #fff; }
+html.pw-dark .pw-t-THANOS { background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 55%, #4c1d95 100%); color: #fff; }
 html.pw-dark .pw-t-S { background: linear-gradient(135deg, #ffe27a, #f5b700); color: #4a3500; }
-html.pw-dark .pw-c-faang { background: #3d1c1a; color: #ff9e95; box-shadow: 0 0 0 1px #6b2c27 inset; }
+html.pw-dark .pw-c-faang { background: linear-gradient(#1f2329, #1f2329) padding-box, linear-gradient(120deg, #ff6b6b, #ffa94d, #c77dff) border-box; box-shadow: none; }
+html.pw-dark .pw-c-faang .pw-lbl, html.pw-dark .pw-c-faang .pw-ico { background-image: linear-gradient(120deg, #ff8a80, #ffb74d 55%, #d0a2ff); }
 html.pw-dark .pw-c-faangadj { background: #2e1a19; color: #f2a39b; box-shadow: 0 0 0 1px #5a2a26 inset; }
 html.pw-dark .pw-c-ailab { background: linear-gradient(135deg, #0fb5ae, #7b61ff); color: #fff; }
 html.pw-dark .pw-c-quant { background: #0b0f0c; color: #39ff88; }

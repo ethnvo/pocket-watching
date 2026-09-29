@@ -1,36 +1,112 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Pocket Watching — Settings</title>
-<style>
-  body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; max-width: 520px; margin: 40px auto; padding: 0 16px; color: #1b1e24; }
-  h1 { font-size: 20px; } label { display: block; font-weight: 600; margin-top: 16px; }
-  input { width: 100%; padding: 8px 10px; font: inherit; border: 1px solid #ccd; border-radius: 8px; margin-top: 4px; }
-  button { margin-top: 16px; padding: 8px 16px; font: inherit; border: 0; border-radius: 8px; background: #1b1e24; color: #fff; cursor: pointer; }
-  .hint { color: #667; font-size: 12.5px; } #status { margin-left: 10px; color: #2a8a4a; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pocket Watching settings</title>
+<link rel="stylesheet" href="options.css">
 </head>
 <body>
-  <h1>⌚ Pocket Watching</h1>
-  <p class="hint">Get a free Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>. It's stored only in your Chrome profile.</p>
-  <label>Gemini API key <input id="apiKey" type="password" placeholder="AIza…"></label>
-  <label>Model <input id="model" placeholder="gemini-2.5-flash"></label>
-  <p class="hint">Leave blank for the default. Any Gemini model that supports Google Search grounding works.</p>
-  <label style="display:flex;gap:8px;align-items:center;font-weight:500"><input id="showTiers" type="checkbox" style="width:auto;margin:0"> Show prestige tiers (THANOS…D) on jobs and schools</label>
-  <button id="save">Save</button><span id="status"></span>
-  <button id="clear" style="background:#eee;color:#1b1e24;margin-left:8px">Clear cache</button>
-  <h2 style="font-size:16px;margin-top:32px">Known pay</h2>
-  <p class="hint">Exact pay you know for a company/role. Overrides Gemini's estimate and shows a ✓ on the badge. Leave role blank to apply to any role at that company.</p>
-  <table id="known" style="width:100%;border-collapse:collapse;font-size:13px"></table>
-  <div style="display:grid;grid-template-columns:1.1fr 1.2fr .6fr .9fr .8fr auto;gap:6px;align-items:end;margin-top:8px">
-    <input id="kpCompany" placeholder="Company">
-    <input id="kpRole" placeholder="Role (optional)">
-    <input id="kpAmount" placeholder="Pay" inputmode="decimal">
-    <select id="kpUnit" style="padding:8px;border:1px solid #ccd;border-radius:8px;font:inherit"><option value="hr">/hr intern</option><option value="mo">/mo intern</option><option value="hrft">/hr full-time</option><option value="yr">/yr full-time</option></select>
-    <input id="kpHousing" placeholder="Housing/mo" inputmode="decimal">
-    <button id="kpAdd" style="margin:0">Add</button>
+  <header class="top">
+    <svg class="dial" viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="26" r="19" class="dial-case"/>
+      <circle cx="24" cy="26" r="16" class="dial-face"/>
+      <rect x="21.5" y="2" width="5" height="4" rx="1.5" class="dial-crown"/>
+      <g class="dial-ticks"></g>
+      <line id="hand-h" x1="24" y1="26" x2="24" y2="17" class="hand hand-h"/>
+      <line id="hand-m" x1="24" y1="26" x2="24" y2="13" class="hand hand-m"/>
+      <circle cx="24" cy="26" r="1.6" class="dial-pin"/>
+    </svg>
+    <div>
+      <h1>Pocket Watching</h1>
+      <p class="sub">Pay, company type and a little context on every LinkedIn experience.</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="rail" aria-label="Sections">
+      <a href="#setup">Setup</a>
+      <a href="#import">Import a profile</a>
+      <a href="#known">Known pay</a>
+      <a href="#badges">Badges</a>
+      <a href="#data">Data</a>
+    </nav>
+
+    <main>
+      <section id="setup">
+        <h2>Setup</h2>
+        <p class="hint">Pocket Watching uses Gemini to look up pay. Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. It stays in your Chrome profile.</p>
+        <div class="field">
+          <label for="apiKey">Gemini API key</label>
+          <div class="inline">
+            <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="AIza…">
+            <button id="toggleKey" class="ghost" type="button">Show</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="model">Model</label>
+          <input id="model" spellcheck="false" placeholder="gemini-2.5-flash">
+          <p class="hint">Leave blank for the default. Any Gemini model with Google Search grounding works.</p>
+        </div>
+        <div class="actions">
+          <button id="saveKey" class="primary" type="button">Save key</button>
+          <button id="testKey" class="ghost" type="button">Test key</button>
+          <span id="keyStatus" class="status" role="status"></span>
+        </div>
+      </section>
+
+      <section id="import">
+        <h2>Import a profile</h2>
+        <p class="hint">Paste a LinkedIn profile link to pull in its jobs, then fill in the pay you know for each one. You need to be signed in to LinkedIn.</p>
+        <form id="importForm" class="inline">
+          <input id="importUrl" type="url" placeholder="linkedin.com/in/username" spellcheck="false" required>
+          <button class="primary" type="submit" id="importBtn">Import jobs</button>
+        </form>
+        <p id="importStatus" class="status" role="status"></p>
+        <div id="importList" class="import-list" hidden></div>
+      </section>
+
+      <section id="known">
+        <h2>Known pay</h2>
+        <p class="hint">Exact pay for a company or role. It replaces Gemini's estimate and gets a blue check. Leave the role blank to cover every role at that company.</p>
+        <div class="table" id="knownTable" role="table" aria-label="Known pay"></div>
+        <p id="knownEmpty" class="empty" hidden>Nothing here yet. Add pay below or import a profile.</p>
+
+        <form id="addForm" class="add">
+          <div class="field"><label for="kpCompany">Company</label><input id="kpCompany" required placeholder="Amazon"></div>
+          <div class="field"><label for="kpRole">Role</label><input id="kpRole" placeholder="Any role"></div>
+          <div class="field money"><label for="kpAmount">Pay</label><input id="kpAmount" required inputmode="decimal" placeholder="10,200"></div>
+          <div class="field"><label for="kpUnit">Per</label>
+            <select id="kpUnit">
+              <option value="hr">hour · intern</option>
+              <option value="mo">month · intern</option>
+              <option value="hrft">hour · full-time</option>
+              <option value="yr">year · full-time</option>
+            </select>
+          </div>
+          <div class="field money"><label for="kpHousing">Housing / mo</label><input id="kpHousing" inputmode="decimal" placeholder="Optional"></div>
+          <div class="field submit"><button class="primary" type="submit">Add pay</button></div>
+        </form>
+      </section>
+
+      <section id="badges">
+        <h2>Badges</h2>
+        <p class="hint">Choose what shows under each job and school. Changes apply right away.</p>
+        <div class="toggles" id="toggles"></div>
+      </section>
+
+      <section id="data">
+        <h2>Data</h2>
+        <p class="hint">Lookups are saved so profiles you revisit load instantly. Your key, Known pay and badge choices are never cleared.</p>
+        <p class="stat" id="cacheStat">Counting saved lookups…</p>
+        <div class="actions">
+          <button id="clear" class="ghost danger" type="button">Clear saved lookups</button>
+          <span id="dataStatus" class="status" role="status"></span>
+        </div>
+      </section>
+    </main>
   </div>
+
   <script src="options.js"></script>
 </body>
 </html>
