@@ -62,6 +62,9 @@ function medianFallback(item, refs, location) {
   );
 }
 
+// Titles that only make sense at a real (big) company — wildly inflated on a club.
+const GRANDIOSE = /member of (the )?technical staff|\bmts\b|forward[- ]deployed|founding engineer|research (scientist|engineer)|staff (software )?engineer|principal engineer|distinguished|\bchief\b|\bc[etfo]o\b|head of (ai|ml|engineering|research|product)|vp of (engineering|ai|product)|director of (engineering|ai|ml|research)|quant(itative)? (researcher|trader|developer)|\bai (researcher|engineer)\b/i;
+
 // MANGO membership is decided by name, not by the model.
 const MANGO = /^(meta|facebook|instagram|whatsapp|anthropic|nvidia|google|alphabet|deepmind|google deepmind|youtube|openai)\b/;
 function applyMango(item, company) {
@@ -80,7 +83,7 @@ function normalizePay(item) {
   return out;
 }
 
-const JOB_CACHE = "v16:"; // per-entry job results (estimates); bump to re-run every lookup
+const JOB_CACHE = "v17:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -323,7 +326,7 @@ async function lookup(entries, profile) {
 
 A) Parse: role title, company, location, and the REAL employment type. Don't trust the title alone:
   - Use the Education section (and headline, e.g. "Student at X", "CS @ UCI") to work out when they were/are enrolled. A role held while they were a student — current or past — is almost always an internship, co-op or part-time job even if it's titled "Software Engineer" and not tagged "Internship". Treat it as an internship for pay.
-  - LARP: set larp=true when a student (or someone clearly pre-graduation at the time) lists a full-time-sounding title (e.g. "Software Engineer", "Product Manager", "CTO", "Founder & CEO" of something with no real footprint) that is really an internship, part-time gig, club/project, or inflated title. Explain in larp_reason. Don't flag roles already clearly labeled Internship/Intern/Co-op/Part-time. Never flag club, student-org, project-team or volunteer positions (President, VP, Treasurer of a student association, lead of a university design team…) — those aren't pretending to be jobs. DO flag a "Founder"/"CEO" of a startup with no real users or traction presented as a real company. Never flag "incoming"/future roles (e.g. "Incoming SWE Intern", "Incoming Software Engineer @ X", or a start date in the future) — announcing an upcoming offer is fine.
+  - LARP: set larp=true ONLY when the title is obscenely inflated for what the thing really is — a grandiose big-company title on something small. Examples that ARE LARP: "Member of Technical Staff" or "Forward Deployed Engineer" at a school club; "Founding Engineer"/"Head of AI" at a class project; "Founder & CEO" of an app with no users. NOT LARP: ordinary titles, even at small things — Treasurer, VP, President, Website Maintainer, Developer, Team Lead at a club; "Software Engineer" at a real small company; anything labeled Intern/Co-op/Part-time; "incoming"/future roles (e.g. "Incoming SWE Intern", or a start date in the future). When in doubt, don't flag. Explain in larp_reason.
   - UNPAID: school clubs, student orgs, university project teams, hackathon teams, research-for-credit, volunteering, and personal projects are unpaid — set unpaid=true, pay fields null, category "Student org" (or "Volunteer" for volunteering). Paid university jobs (TA, paid research assistant) are NOT unpaid.
 
 SPEED: Be fast. For well-known companies (big tech, quant firms, major banks, well-known startups) answer from your own knowledge — do NOT search. Only use Google Search for companies or pay you genuinely don't know, and use at most 2 searches total.
@@ -417,13 +420,20 @@ ${list}`;
     // headline that names this entry's company.
     const headlineIncoming = /\bincoming\b/i.test(profile.headline || "") && e.hint?.company &&
       norm(profile.headline).includes(norm(e.hint.company).split(" ")[0]);
-    // clubs / student orgs / volunteering aren't claiming to be jobs → never LARP
+    // Clubs / student orgs: ordinary titles are never LARP; a grandiose big-company
+    // title (Member of Technical Staff, Forward Deployed Engineer, CTO…) always is.
     const org = `${e.hint?.company || ""} ${e.group || ""}`;
     const looksStudentOrg = /\b(club|society|association|chapter|student|fraternity|sorority)\b|\bat (uc ?\w+|ucla|ucsd|ucsb|uci|university|college)\b/i.test(org);
     if (looksStudentOrg && item.category === "Startup") item.category = "Student org";
-    if (item.larp && (/^(Student org|Volunteer)$/.test(item.category || "") || looksStudentOrg)) {
-      item.larp = false;
-      item.larp_reason = null;
+    if (looksStudentOrg || /^(Student org|Volunteer)$/.test(item.category || "")) {
+      const title = e.hint?.title || item.role || "";
+      if (GRANDIOSE.test(title)) {
+        item.larp = true;
+        item.larp_reason = item.larp_reason || `"${title}" is a big-company title for a student org.`;
+      } else {
+        item.larp = false;
+        item.larp_reason = null;
+      }
     }
     if (item.larp && (/\bincoming\b/i.test(e.text) || headlineIncoming)) {
       item.larp = false;

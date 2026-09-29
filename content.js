@@ -279,7 +279,7 @@
       chips.push(`<span class="pw-chip pw-tier pw-t-${tier}" data-tip="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`);
     }
     if (badges.larp && r.larp) {
-      const larpTip = `LARP: a full-time-sounding title for what was really an internship, part-time gig, club, side project or inflated title — held while still in school.\n\nWhy: ${r.larp_reason || "Listed as a full-time title while still in school."}`;
+      const larpTip = `LARP: a wildly inflated title for what it really was, like "Member of Technical Staff" at a school club or "CEO" of an app with no users.\n\nWhy: ${r.larp_reason || "The title is far bigger than the role."}`;
       chips.push(`<span class="pw-chip pw-larp" data-tip="${esc(larpTip)}">LARP</span>`);
     }
     const cat = badges.category ? categoryChip(r) : "";

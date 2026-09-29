@@ -239,7 +239,7 @@ function renderImport(name, jobs, known) {
 }
 
 // ---------- estimates: browse, correct, confirm, delete ----------
-const JOB_CACHE = "v16:"; // keep in sync with background.js
+const JOB_CACHE = "v17:"; // keep in sync with background.js
 const CATEGORY_OPTIONS = ["MANGO", "FAANG", "FAANG-adjacent", "FAANG-lite", "AI Lab", "Quant", "Hedge Fund", "Fintech", "Big Tech", "Unicorn", "Startup", "Bank", "Consulting", "Defense", "Public co", "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed"];
 
 function estPay(d) {
@@ -354,7 +354,7 @@ const BADGES = [
   ["unverified", "Unverified flag", "When Gemini couldn't confirm a company or its pay"],
   ["category", "Company type", "MANGO, FAANG, Quant, Startup, Fintech and so on"],
   ["tiers", "Compliments", "THANOS, S and A tier on standout jobs and schools"],
-  ["larp", "LARP flag", "Full-time titles held while still in school"],
+  ["larp", "LARP flag", "Wildly inflated titles, like Member of Technical Staff at a school club"],
   ["school", "School label", "Top 5 CS, Ivy, UC and similar"],
   ["tenure", "Time in school", "Early grad, super senior and beyond"],
 ];
