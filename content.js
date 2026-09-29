@@ -301,10 +301,10 @@
           : r.pay_period === "month"
             ? [money(r.pay_amount, cur, 0) + "/mo", `<span class="pw-dim">≈${hourlyStr(r.pay_hourly, cur)}/hr</span>`]
             : [hourlyStr(r.pay_hourly, cur) + "/hr"];
-      const scope = r.pay_scope === "market" ? ` <span class="pw-dim">mkt</span>` : r.pay_scope === "median" ? ` <span class="pw-dim">median</span>` : "";
-      const check = badges.verified && r.verified && (r.pay_scope === "company" || r.pay_scope === "reported")
-        ? verifiedCheck(`Verified · ${r.pay_scope === "reported" ? r.pay_source : r.pay_basis || "company and pay confirmed"}`)
-        : "";
+      // Blue check = confirmed by you (Known pay). Everything found online is an estimate.
+      const confirmed = r.pay_scope === "reported";
+      const scope = confirmed ? "" : ` <span class="pw-dim">${r.pay_scope === "market" ? "mkt" : r.pay_scope === "median" ? "median" : "est."}</span>`;
+      const check = badges.verified && confirmed ? verifiedCheck(`Confirmed · ${r.pay_source}`) : "";
       const payTip =
         kind === "full-time"
           ? `Total compensation per year (base + stock + bonus)${r.level ? ` at ${r.level}` : ""}. Without a level in the title, this assumes the new-grad level.\n\n${r.pay_basis || ""}`

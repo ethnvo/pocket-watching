@@ -237,7 +237,7 @@ function renderImport(name, jobs, known) {
 const BADGES = [
   ["pay", "Pay", "Hourly, monthly or yearly pay for each job"],
   ["housing", "Housing stipend", "Monthly or lump-sum housing for internships"],
-  ["verified", "Verified check", "Blue check when the company and pay are confirmed"],
+  ["verified", "Confirmed check", "Blue check on pay you've confirmed in Known pay"],
   ["unverified", "Unverified flag", "When Gemini couldn't confirm a company or its pay"],
   ["category", "Company type", "FAANG, Quant, Startup, Fintech and so on"],
   ["tiers", "Compliments", "THANOS, S and A tier on standout jobs and schools"],
