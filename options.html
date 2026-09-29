@@ -28,6 +28,7 @@
       <a href="#setup">Setup</a>
       <a href="#import">Import a profile</a>
       <a href="#known">Known pay</a>
+      <a href="#estimates">Estimates</a>
       <a href="#badges">Badges</a>
       <a href="#data">Data</a>
     </nav>
@@ -90,6 +91,15 @@
           <label class="check-field" for="kpReference"><input id="kpReference" type="checkbox"> Unconfirmed — use only as a reference, no blue check</label>
           <div class="field submit"><button class="primary" type="submit">Add pay</button></div>
         </form>
+      </section>
+
+      <section id="estimates">
+        <h2>Estimates</h2>
+        <p class="hint">Everything Gemini has looked up. Fix a number that's wrong (it stays an estimate, marked "edited"), confirm one you know is right (it moves to Known pay and gets a blue check), or delete it to look it up again next visit. Refresh LinkedIn to see changes.</p>
+        <input id="estSearch" type="search" placeholder="Filter by company, role, location or profile" spellcheck="false">
+        <div class="table est-table" id="estTable"></div>
+        <p id="estEmpty" class="empty" hidden>No estimates yet. Open a LinkedIn profile to collect some.</p>
+        <p id="estStatus" class="status" role="status"></p>
       </section>
 
       <section id="badges">

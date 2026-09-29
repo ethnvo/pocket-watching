@@ -238,13 +238,121 @@ function renderImport(name, jobs, known) {
   };
 }
 
+// ---------- estimates: browse, correct, confirm, delete ----------
+const JOB_CACHE = "v15:"; // keep in sync with background.js
+const CATEGORY_OPTIONS = ["MANGO", "FAANG", "FAANG-adjacent", "FAANG-lite", "AI Lab", "Quant", "Hedge Fund", "Fintech", "Big Tech", "Unicorn", "Startup", "Bank", "Consulting", "Defense", "Public co", "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed"];
+
+function estPay(d) {
+  if (d.unpaid) return "Unpaid";
+  if (!d.pay_hourly && !d.pay_annual) return "No pay found";
+  const ft = (d.employment || (d.is_internship ? "internship" : "full-time")) === "full-time";
+  if (ft) return `${money(d.pay_annual)} TC${d.level ? ` · ${d.level}` : ""}`;
+  if (d.pay_period === "month") return `${money(d.pay_amount)}/mo`;
+  return `${money(d.pay_hourly, Number.isInteger(d.pay_hourly) ? 0 : 2)}/hr`;
+}
+const SCOPE_LABEL = { company: "est.", market: "mkt", median: "median", edited: "edited", reported: "confirmed" };
+
+async function renderEstimates() {
+  const all = await chrome.storage.local.get(null);
+  const q = norm($("estSearch").value);
+  const rows = Object.entries(all)
+    .filter(([k, v]) => k.startsWith(JOB_CACHE) && v?.data)
+    .map(([key, v]) => ({ key, ...v, h: v.hint || {}, d: v.data }))
+    .filter((r) => !q || norm(`${r.h.company || r.d.company} ${r.h.title || r.d.role} ${r.h.location || r.d.location} ${r.who}`).includes(q))
+    .sort((a, b) => b.at - a.at);
+  $("estEmpty").hidden = rows.length > 0;
+  $("estTable").innerHTML = rows
+    .map((r) => {
+      const scope = r.d.pay_scope || "company";
+      return `<div class="row" data-key="${esc(r.key)}">
+        <span><b>${esc(r.h.company || r.d.company || "Unknown")}</b><span class="role" style="display:block">${esc(r.h.title || r.d.role || "")}</span>
+          <span class="who">${esc(r.h.location || r.d.location || "")}${r.who ? ` · from ${esc(r.who)}` : ""}</span></span>
+        <span class="pay">${esc(estPay(r.d))}<span class="tags"><span class="tag${scope === "edited" ? " edited" : ""}">${SCOPE_LABEL[scope] || "est."}</span>${r.d.category ? `<span class="tag">${esc(r.d.category)}</span>` : ""}</span></span>
+        <span class="who">${new Date(r.at).toLocaleDateString()}</span>
+        <span class="row-actions">
+          <button type="button" data-act="edit">Edit</button>
+          <button type="button" data-act="confirm" title="Move to Known pay with a blue check">Confirm</button>
+          <button type="button" data-act="del" class="del">Delete</button>
+        </span>
+      </div>`;
+    })
+    .join("");
+}
+
+function editRowHtml(d) {
+  const unit = d.pay_period === "month" ? "mo" : d.pay_period === "year" ? "yr" : "hr";
+  const ft = (d.employment || (d.is_internship ? "internship" : "full-time")) === "full-time";
+  const amount = d.pay_period === "year" ? d.pay_annual ?? d.pay_amount : d.pay_period === "month" ? d.pay_amount : d.pay_hourly;
+  const opt = (v, t, cur) => `<option value="${v}"${v === cur ? " selected" : ""}>${t}</option>`;
+  return `<div class="edit-row">
+    <div class="field money"><label>Pay</label><input data-f="amount" inputmode="decimal" value="${esc(amount ?? "")}"></div>
+    <div class="field"><label>Per</label><select data-f="unit">${opt("hr", "hour", unit)}${opt("mo", "month", unit)}${opt("yr", ft ? "year · TC" : "year", unit)}</select></div>
+    <div class="field money"><label>Housing/mo</label><input data-f="housing" inputmode="decimal" value="${esc(d.housing_period === "month" ? d.housing_amount ?? "" : "")}"></div>
+    <div class="field"><label>Company type</label><select data-f="category">${CATEGORY_OPTIONS.map((c) => opt(c, c, d.category)).join("")}</select></div>
+    <div class="field"><label>Level</label><input data-f="level" value="${esc(d.level || "")}" placeholder="${ft ? "E3, L3…" : "—"}"></div>
+    <div class="btns"><button type="button" class="ghost" data-act="cancel">Cancel</button><button type="button" class="primary" data-act="save">Save</button></div>
+  </div>`;
+}
+
+$("estSearch").oninput = () => renderEstimates();
+$("estTable").onclick = async (ev) => {
+  const btn = ev.target.closest("button[data-act]");
+  if (!btn) return;
+  const row = btn.closest(".row") || btn.closest(".edit-row")?.previousElementSibling;
+  const key = row?.dataset.key;
+  const cur = key && (await chrome.storage.local.get(key))[key];
+  if (!cur) return renderEstimates();
+  const d = cur.data, h = cur.hint || {};
+
+  if (btn.dataset.act === "del") {
+    await chrome.storage.local.remove(key);
+    flash($("estStatus"), "Deleted. It'll be looked up again next time you visit that profile.");
+    return renderEstimates();
+  }
+  if (btn.dataset.act === "edit") {
+    row.nextElementSibling?.classList.contains("edit-row") ? row.nextElementSibling.remove() : row.insertAdjacentHTML("afterend", editRowHtml(d));
+    return;
+  }
+  if (btn.dataset.act === "cancel") return btn.closest(".edit-row").remove();
+  if (btn.dataset.act === "save") {
+    const form = btn.closest(".edit-row");
+    const f = (n) => form.querySelector(`[data-f="${n}"]`).value.trim();
+    const amount = num(f("amount"));
+    const period = { hr: "hour", mo: "month", yr: "year" }[f("unit")];
+    const housing = num(f("housing"));
+    const patch = {
+      category: f("category"),
+      level: f("level") || null,
+      ...(amount ? { pay_amount: amount, pay_period: period } : {}),
+      ...(housing ? { housing_amount: housing, housing_period: "month" } : { housing_amount: null, housing_period: null }),
+    };
+    chrome.runtime.sendMessage({ type: "pw:editEstimate", key, patch }, (resp) => {
+      if (chrome.runtime.lastError || !resp?.ok) return flash($("estStatus"), resp?.error || "Couldn't save.", "err", 6000);
+      flash($("estStatus"), "Saved. Refresh LinkedIn to see it.");
+      renderEstimates();
+    });
+    return;
+  }
+  if (btn.dataset.act === "confirm") {
+    if (!d.pay_hourly && !d.pay_annual) return flash($("estStatus"), "There's no pay to confirm on that one. Edit it first.", "err");
+    const ft = (d.employment || (d.is_internship ? "internship" : "full-time")) === "full-time";
+    const unit = ft ? "yr" : d.pay_period === "month" ? "mo" : d.is_internship ? "hr" : "hrft";
+    const amount = unit === "yr" ? d.pay_annual : unit === "mo" ? d.pay_amount : d.pay_hourly; // hr / hrft
+    await upsertKnown([
+      entryFrom(h.company || d.company, h.title || d.role, amount, unit, d.housing_period === "month" ? d.housing_amount : null, h.location || d.location, "Confirmed from an estimate"),
+    ]);
+    flash($("estStatus"), `Confirmed. ${h.company || d.company} is in Known pay now.`);
+    return;
+  }
+};
+
 // ---------- badges ----------
 const BADGES = [
   ["pay", "Pay", "Hourly, monthly or yearly pay for each job"],
   ["housing", "Housing stipend", "Monthly or lump-sum housing for internships"],
   ["verified", "Confirmed check", "Blue check on pay you've confirmed in Known pay"],
   ["unverified", "Unverified flag", "When Gemini couldn't confirm a company or its pay"],
-  ["category", "Company type", "FAANG, Quant, Startup, Fintech and so on"],
+  ["category", "Company type", "MANGO, FAANG, Quant, Startup, Fintech and so on"],
   ["tiers", "Compliments", "THANOS, S and A tier on standout jobs and schools"],
   ["larp", "LARP flag", "Full-time titles held while still in school"],
   ["school", "School label", "Top 5 CS, Ivy, UC and similar"],
@@ -340,5 +448,6 @@ chrome.storage.onChanged?.addListener((ch, area) => {
 });
 
 renderKnown();
+renderEstimates();
 countCache();
 countConfirmed();

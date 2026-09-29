@@ -62,7 +62,13 @@ function medianFallback(item, refs, location) {
   );
 }
 
-const ELITE = /^(FAANG|FAANG-adjacent|FAANG\+|AI Lab|Quant|Hedge Fund)$/;
+// MANGO membership is decided by name, not by the model.
+const MANGO = /^(meta|facebook|instagram|whatsapp|anthropic|nvidia|google|alphabet|deepmind|google deepmind|youtube|openai)\b/;
+function applyMango(item, company) {
+  return MANGO.test(canonCompany(company || item.company)) ? { ...item, category: "MANGO", stage: null } : item;
+}
+
+const ELITE = /^(MANGO|FAANG|FAANG-adjacent|FAANG\+|AI Lab|Quant|Hedge Fund)$/;
 const ENG_ROLE = /engineer|developer|\bsde\b|\bswe\b|software|quant|research/i;
 
 function normalizePay(item) {
@@ -74,6 +80,7 @@ function normalizePay(item) {
   return out;
 }
 
+const JOB_CACHE = "v15:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -89,7 +96,7 @@ const canonCompany = (s) => {
   }
   return n;
 };
-const coKey = (company) => `co2:${canonCompany(company)}`;
+const coKey = (company) => `co3:${canonCompany(company)}`;
 const payKey = (company, title, location, intern) =>
   `pay2:${canonCompany(company)}|${norm(title)}|${norm(location)}|${intern ? "intern" : "ft"}`;
 
@@ -131,6 +138,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "pw:options") return void chrome.runtime.openOptionsPage();
   if (msg?.type === "pw:isImportTab") return void sendResponse(importWaiters.has(_sender.tab?.id));
   if (msg?.type === "pw:imported") return void importWaiters.get(_sender.tab?.id)?.(msg.data);
+  if (msg?.type === "pw:editEstimate") {
+    editEstimate(msg.key, msg.patch)
+      .then((data) => sendResponse({ ok: true, data }))
+      .catch((err) => sendResponse({ ok: false, error: String(err?.message || err) }));
+    return true;
+  }
   if (msg?.type === "pw:import") {
     importProfile(msg.url)
       .then((data) => sendResponse({ ok: true, data }))
@@ -171,6 +184,36 @@ async function importProfile(url) {
   });
 }
 
+// ---------- Settings → Estimates: correct a saved estimate ----------
+async function editEstimate(key, patch) {
+  const cur = (await chrome.storage.local.get(key))[key];
+  if (!cur) throw new Error("That estimate no longer exists.");
+  let item = {
+    ...cur.data,
+    ...patch,
+    unpaid: false,
+    pay_scope: "edited",
+    pay_basis: "You corrected this estimate in Settings.",
+    verify_note: null,
+  };
+  if (patch.pay_amount != null) item = withPayMath(item, toHourly(item.pay_amount, item.pay_period));
+  const toStore = { [key]: { ...cur, at: Date.now(), data: item } };
+  // let other profiles with the same job benefit from the correction
+  const h = cur.hint || {};
+  if (h.company && item.pay_hourly) {
+    const intern = /intern|co-?op/i.test(`${h.type || ""} ${h.title || ""}`);
+    toStore[payKey(h.company, h.title, h.location, intern)] = {
+      at: Date.now(),
+      location: h.location || null,
+      hourly: item.pay_hourly,
+      period: item.pay_period || "hour",
+      fact: `${h.title} at ${h.company}${h.location ? ` in ${h.location}` : ""}: ${item.pay_period === "month" ? `$${item.pay_amount}/month` : item.pay_period === "year" ? `$${item.pay_amount}/yr` : `$${item.pay_hourly}/hr`} (corrected by the user, not confirmed).`,
+    };
+  }
+  await chrome.storage.local.set(toStore);
+  return item;
+}
+
 // Cap concurrent Gemini calls so a long profile doesn't trip free-tier rate limits.
 const MAX_CONCURRENT = 5;
 let active = 0;
@@ -194,11 +237,11 @@ function pump() {
 
 async function lookup(entries, profile) {
   const results = {};
-  const keys = entries.map((e) => `v13:${e.key}`);
+  const keys = entries.map((e) => `${JOB_CACHE}${e.key}`);
   const cached = await chrome.storage.local.get(keys);
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`v13:${e.key}`];
+    const hit = cached[`${JOB_CACHE}${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
@@ -296,25 +339,26 @@ B) PAY. Rules, in priority order:
   5. Founder/self-employed/volunteer/unpaid: pay fields null, explain in pay_basis.
 
 C) PRESTIGE TIER — how impressive/selective THIS SPECIFIC ROLE at THIS company is. The role matters as much as the company: rate the seat, not the logo.
-  THANOS = reserved for the truly insane. Mainly core roles at top quant/HFT/prop firms (Jane Street, Citadel/Citadel Securities, Hudson River Trading, Jump, Two Sigma, DE Shaw, Optiver, IMC, SIG, Five Rings, Radix, Tower) — quant trader, researcher, dev, SWE. Beyond quant, only seats that are rarer still: research scientist at a frontier AI lab (OpenAI, Anthropic, Google DeepMind), founding engineer at a top-tier-backed startup (YC / a16z / Sequoia with real traction). Use it sparingly.
-  S = elite & hyper-selective: engineering at frontier AI labs or the hottest top startups, MBB consulting, elite rotational APM programs (Google APM, Meta RPM), top-bucket IB.
-  A = the FAANG / FAANG+ group — core engineering/ML roles at Google, Meta, Apple, Amazon, Netflix, Microsoft, Nvidia, Snowflake, Databricks, Stripe, Palantir, and peers of that caliber.
+  THANOS = reserved for the truly insane. Mainly core roles at top quant/HFT/prop firms (Jane Street, Citadel/Citadel Securities, Hudson River Trading, Jump, Two Sigma, DE Shaw, Optiver, IMC, SIG, Five Rings, Radix, Tower) — quant trader, researcher, dev, SWE. Beyond quant, only seats that are rarer still: research scientist at a frontier AI lab (OpenAI, Anthropic, Google DeepMind), founding engineer at a top-tier-backed startup (YC / a16z / Sequoia with real traction), and FOUNDER/CO-FOUNDER of a startup that was acquired or is backed by a top-tier VC (a16z, Sequoia, Founders Fund, Benchmark, Accel, Greylock, Kleiner, Index, Lightspeed, General Catalyst…). A quick check is enough — no need to be exhaustive. Use it sparingly otherwise.
+  S = elite & hyper-selective: core engineering/ML at MANGO (Meta, Anthropic, Nvidia, Google, OpenAI) — the tier above FAANG; engineering at other frontier AI labs or the hottest top startups; MBB consulting; elite rotational APM programs (Google APM, Meta RPM); top-bucket IB.
+  A = the FAANG / FAANG+ group — core engineering/ML roles at Apple, Amazon, Netflix, Microsoft, Snowflake, Databricks, Stripe, Palantir, and peers of that caliber.
   B = good but not elite: non-core roles at big tech (PM or program-manager internships), core roles at well-known large companies (Visa, Salesforce, Adobe, big banks' tech), Big 4.
   MID = decent, RECOGNIZABLE companies: established mid-size/large companies people have heard of, regional names, defense primes, well-funded startups with a real brand. Being verified to exist is not enough — small or obscure private companies and early startups are C.
   C = the DEFAULT for any company that isn't well known — small/lesser-known startups and companies, anything you can't verify — unless a role bump below applies. Also a peripheral role anywhere.
   D = non-selective or unrelated role (e.g. retail, food service) or clearly fake/placeholder company.
   ROLE BUMPS / DROPS:
   - Founding engineer or one of the first ~5 engineers at a verified, VC-backed startup → THANOS. At an unfunded/unverifiable company → C bumped one tier (MID).
-  - Founder/co-founder: rate on real traction/funding — top-VC-backed or YC → S/THANOS; unfunded or unknown → C.
+  - Founder/co-founder: acquired, or backed by a top-tier VC → THANOS; YC or other real funding → S; unfunded or unknown → C.
   - Non-core functions (ops, program/project management, sales, support, marketing, HR, IT) usually rank 1-2 tiers below the company's core engineering/trading seat.
 
 D) VERIFICATION — verified=true if the company is well known or you confirmed it exists, AND the pay figure is grounded in real data you know or found (for unpaid roles, just the org). verified=false if the company is too obscure to confirm or you're guessing the pay; say what's missing in verify_note.
 
 E) CATEGORY — pick exactly one:
-  "FAANG" = Meta, Apple, Amazon (incl. AWS, Amazon Music, etc.), Netflix, Google/Alphabet.
-  "FAANG-adjacent" = peers right next to FAANG: Microsoft, Nvidia, Uber, DoorDash, LinkedIn, Tesla.
+  "MANGO" = Meta (incl. Facebook, Instagram, WhatsApp), Anthropic, Nvidia, Google/Alphabet (incl. DeepMind, YouTube), OpenAI — the newer tier above FAANG.
+  "FAANG" = Apple, Amazon (incl. AWS, Amazon Music, etc.), Netflix. (Meta and Google are MANGO.)
+  "FAANG-adjacent" = peers right next to FAANG: Microsoft, Uber, DoorDash, LinkedIn, Tesla.
   "FAANG-lite" = strong, well-paying companies a step below: Capital One, Airbnb, Lyft, Snap, Pinterest, Coinbase, Robinhood, Databricks, Snowflake, Palantir, Roblox, Figma, Discord, Scale AI, Stripe, Instacart, Reddit, Dropbox, etc.
-  "AI Lab" = frontier AI labs: OpenAI, Anthropic, Google DeepMind, xAI, Mistral.
+  "AI Lab" = frontier AI labs other than MANGO: xAI, Mistral, Safe Superintelligence, Thinking Machines, Reflection, etc.
   "Quant" = quant trading / HFT / prop / market makers: Jane Street, Citadel Securities, HRT, Jump, Optiver, IMC, SIG, Five Rings, Tower, DRW.
   "Hedge Fund" = hedge funds & multi-managers: Citadel, Two Sigma, DE Shaw, Bridgewater, Millennium, Point72, Renaissance.
   "Fintech" = payments/financial tech: Visa, Mastercard, PayPal, Block, Plaid, Ramp, Brex, Chime, Affirm.
@@ -339,7 +383,7 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, in th
   "housing_period": "month" | "total" | null,
   "currency": string,                  // ISO code, e.g. "USD"
   "pay_scope": "company" | "market",
-  "pay_basis": string,                 // one short sentence: what the number is and where it came from
+  "pay_basis": string,                 // name the source and what the figure is, e.g. "Levels.fyi — Acorns SWE intern, 2025 (3 data points)". No boilerplate like "hourly pay for this position".
   "tier": "THANOS" | "S" | "A" | "B" | "MID" | "C" | "D",
   "category": string,
   "stage": string | null,
@@ -367,7 +411,7 @@ ${list}`;
   for (const raw of arr) {
     const e = misses[raw?.i];
     if (!e) continue;
-    const item = medianFallback(normalizePay(raw), refsByKey[e.key], e.hint?.location || raw.location);
+    const item = medianFallback(normalizePay(applyMango(raw, e.hint?.company)), refsByKey[e.key], e.hint?.location || raw.location);
     // "Incoming …" is announcing an offer, not LARPing — in the entry itself, or in a
     // headline that names this entry's company.
     const headlineIncoming = /\bincoming\b/i.test(profile.headline || "") && e.hint?.company &&
@@ -377,7 +421,8 @@ ${list}`;
       item.larp_reason = null;
     }
     results[e.key] = item;
-    toStore[`v13:${e.key}`] = { at: Date.now(), data: item };
+    // who/hint let Settings → Estimates show where an estimate came from
+    toStore[`${JOB_CACHE}${e.key}`] = { at: Date.now(), who: profile.name || null, hint: e.hint || null, data: item };
 
     // Feed the shared cache (keyed on the scraped hint so the next lookup can find it).
     const h = e.hint || {};

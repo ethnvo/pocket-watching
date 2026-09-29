@@ -57,6 +57,13 @@ html.pw-dark .pw-yc { background: #3a2216; color: #ffb38a; }
 /* company categories */
 .pw-cat { font-weight: 700; }
 .pw-ico { font-size: 11px; line-height: 1; }
+/* MANGO: ripe-mango gradient — a notch louder than FAANG, since it's the tier above */
+.pw-c-mango {
+  background: linear-gradient(120deg, #ffd23f 0%, #ffa62b 45%, #ff6b35 80%, #7cb342 115%);
+  color: #3b1d00; font-weight: 800; letter-spacing: .5px;
+  box-shadow: 0 0 0 1px rgba(191, 90, 0, .35) inset, 0 1px 6px rgba(255, 140, 0, .35);
+}
+
 /* FAANG: gradient hairline + gradient lettering — sharp, not loud */
 .pw-c-faang {
   border: 1px solid transparent;
@@ -118,3 +125,6 @@ html.pw-dark .pw-c-hedge { background: linear-gradient(135deg, #0d1b3d, #1c2f63)
 html.pw-dark .pw-c-fintech { background: linear-gradient(135deg, #10b981, #0e7490); color: #fff; }
 html.pw-dark .pw-c-bank { background: #1f3a5f; color: #e7eef8; }
 html.pw-dark .pw-larp { background: #2f2f2f; color: #9a9a9a; }
+
+/* keep MANGO ripe in dark mode (must come after the generic dark chip rule) */
+html.pw-dark .pw-c-mango { background: linear-gradient(120deg, #ffd23f 0%, #ffa62b 45%, #ff6b35 80%, #7cb342 115%); color: #3b1d00; }

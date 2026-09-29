@@ -303,14 +303,23 @@
             : [hourlyStr(r.pay_hourly, cur) + "/hr"];
       // Blue check = confirmed by you (Known pay). Everything found online is an estimate.
       const confirmed = r.pay_scope === "reported";
-      const scope = confirmed ? "" : ` <span class="pw-dim">${r.pay_scope === "market" ? "mkt" : r.pay_scope === "median" ? "median" : "est."}</span>`;
+      const scope = confirmed ? "" : ` <span class="pw-dim">${{ market: "mkt", median: "median", edited: "edited" }[r.pay_scope] || "est."}</span>`;
       const check = badges.verified && confirmed ? verifiedCheck(`Confirmed · ${r.pay_source}`) : "";
-      const payTip =
+      const what =
         kind === "full-time"
-          ? `Total compensation per year (base + stock + bonus)${r.level ? ` at ${r.level}` : ""}. Without a level in the title, this assumes the new-grad level.\n\n${r.pay_basis || ""}`
+          ? `Total compensation per year (base + stock + bonus)${r.level ? ` at ${r.level}` : ", assuming the new-grad level"}.`
           : r.pay_period === "month"
-            ? `${r.pay_basis || ""}\n\nMonthly salary. The hourly figure is just an equivalent for comparing (salary × 12 ÷ 2080 hrs).`
-            : r.pay_basis || "";
+            ? "Monthly salary. The hourly figure is only an equivalent (salary × 12 ÷ 2080 hrs)."
+            : "";
+      const how = {
+        reported: `Confirmed by you · ${r.pay_source || "Known pay"}`,
+        edited: "Estimate you corrected in Settings. Not confirmed.",
+        company: "Estimate: pay found online for this company and role. Not confirmed, so it could be off.",
+        market: `Estimate: no company-specific data found, so this is typical pay for the title${r.location ? ` in ${r.location}` : ""}.`,
+        median: "Estimate: the median of pay known for this role at this company in other US locations.",
+      }[r.pay_scope] || "Estimate. Not confirmed.";
+      const source = r.pay_scope === "reported" || r.pay_scope === "edited" ? "" : r.pay_basis ? `Source: ${r.pay_basis}` : "";
+      const payTip = [how, what, source].filter(Boolean).join("\n\n");
       chips.push(`<span class="pw-chip pw-pay" data-tip="${esc(payTip)}">${parts.filter(Boolean).join(" ")}${scope}${check}</span>`);
       if (badges.housing && r.is_internship && r.housing_amount) {
         const h = r.housing_period === "month" ? `${money(r.housing_amount, cur, 0)}/mo` : money(r.housing_amount, cur, 0);
@@ -424,7 +433,18 @@
     return t ? `<span class="pw-chip pw-tenure pw-ten-${t.cls}" data-tip="${esc(t.tip)}">${esc(t.label)}</span>` : "";
   }
 
+  const CATEGORY_TIPS = {
+    MANGO: "MANGO = Meta, Anthropic, Nvidia, Google, OpenAI. The newer, AI-era answer to FAANG, and a tier above it.",
+    FAANG: "FAANG = Facebook (Meta), Apple, Amazon, Netflix, Google. Meta and Google now count as MANGO.",
+    "FAANG-adjacent": "Right next to FAANG: Microsoft, Uber, DoorDash, LinkedIn, Tesla.",
+    "FAANG-lite": "Strong, well-paying tech a step below FAANG: Capital One, Airbnb, Stripe, Snowflake, Databricks and similar.",
+    Quant: "Quant trading / HFT / market making.",
+    "AI Lab": "A frontier AI lab.",
+    Unicorn: "A private startup valued at $1B+.",
+  };
+
   const CATEGORIES = {
+    "MANGO": { cls: "mango", icon: "🥭" },
     "FAANG": { cls: "faang", icon: "★" },
     "FAANG-adjacent": { cls: "faangadj", icon: "☆" },
     "FAANG+": { cls: "faangadj", icon: "☆" },
@@ -450,7 +470,8 @@
     const c = CATEGORIES[name] || { cls: "plain", icon: "" };
     // Funding round only means something for regular startups; a unicorn is just $1B+.
     const label = name === "Startup" && r.stage ? `${r.stage} startup` : name === "University" ? "University position" : name;
-    return `<span class="pw-chip pw-cat pw-c-${c.cls}">${c.icon ? `<span class="pw-ico">${c.icon}</span>` : ""}<span class="pw-lbl">${esc(label)}</span></span>`;
+    const tip = CATEGORY_TIPS[name];
+    return `<span class="pw-chip pw-cat pw-c-${c.cls}"${tip ? ` data-tip="${esc(tip)}"` : ""}>${c.icon ? `<span class="pw-ico">${c.icon}</span>` : ""}<span class="pw-lbl">${esc(label)}</span></span>`;
   }
 
   // ---------- utils ----------
