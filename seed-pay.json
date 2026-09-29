@@ -5,7 +5,8 @@
     "hourly": 21,
     "intern": true,
     "location": "Irvine, California",
-    "v": 2
+    "v": 3,
+    "source": "Summer 2025 offer"
   },
   {
     "company": "EQUUS",
@@ -13,7 +14,8 @@
     "hourly": 23,
     "intern": true,
     "location": "City of Industry, California",
-    "v": 2
+    "v": 3,
+    "source": "Summer 2026 offer"
   },
   {
     "company": "Amazon",
@@ -22,8 +24,9 @@
     "housing": 2200,
     "housing_period": "month",
     "intern": true,
-    "v": 3,
-    "location": "Culver City, California"
+    "v": 4,
+    "location": "Culver City, California",
+    "source": "Fall 2026 offer"
   },
   {
     "company": "Amazon",
@@ -33,6 +36,7 @@
     "housing_period": "month",
     "intern": true,
     "location": "Seattle, Washington",
-    "v": 1
+    "v": 2,
+    "source": "Fall 2026 offer"
   }
 ]

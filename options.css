@@ -121,6 +121,7 @@ button:disabled { opacity: .55; cursor: progress; }
 .row .role small { display: block; color: var(--ink-3); font-size: 12.5px; }
 .row .pay { font-variant-numeric: tabular-nums; }
 .row .pay small { display: block; color: var(--ink-3); font-size: 12.5px; }
+.row .pay .src { color: var(--check); }
 .row .pay .kind { color: var(--ink-3); }
 .row .remove { height: 32px; padding: 0 10px; font-weight: 500; font-size: 13px; color: var(--ink-3); background: none; border: 0; }
 .row .remove:hover { color: var(--danger); }
@@ -131,7 +132,8 @@ button:disabled { opacity: .55; cursor: progress; }
   padding: 16px; border: 1px dashed var(--line); border-radius: 12px;
 }
 .add .field { margin: 0; }
-.add .submit { grid-column: -2 / -1; }
+.add .source { grid-column: span 3; }
+.add .submit { grid-column: span 3; justify-self: end; }
 .money input { font-variant-numeric: tabular-nums; }
 
 /* ---------- import ---------- */
@@ -150,7 +152,7 @@ button:disabled { opacity: .55; cursor: progress; }
 .job .what span { color: var(--ink-2); font-size: 13.5px; }
 .job .what em { font-style: normal; color: var(--ink-3); font-size: 12.5px; display: block; }
 .job .field { margin: 0; }
-.import-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 16px; border-top: 1px solid var(--line); }
+.import-foot { display: flex; justify-content: flex-end; align-items: end; gap: 10px; padding: 14px 16px; border-top: 1px solid var(--line); }
 
 /* ---------- badge toggles ---------- */
 .toggles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }

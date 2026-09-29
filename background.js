@@ -464,7 +464,8 @@ function applyKnownPay(results, entries, list) {
       ...(k.housing != null ? { housing_amount: k.housing, housing_period: k.housing_period || "month" } : {}),
       currency: k.currency || "USD",
       pay_scope: "reported",
-      pay_basis: `Reported pay${k.role ? ` for ${k.role}` : ""} at ${k.company}${k.location ? ` in ${k.location}` : ""} (from your Known pay list).`,
+      pay_source: k.source || "your Known pay list",
+      pay_basis: `${k.source || "Reported pay"}${k.role ? ` for ${k.role}` : ""} at ${k.company}${k.location ? ` in ${k.location}` : ""} (from your Known pay list).`,
       verified: true,
     };
     results[e.key] = withPayMath(base, hourly);

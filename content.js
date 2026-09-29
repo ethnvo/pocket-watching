@@ -274,7 +274,9 @@
           : [hourlyStr(r.pay_hourly, cur) + "/hr"]
         : [money(r.pay_annual, cur, 0, true) + "/yr", r.pay_hourly ? hourlyStr(r.pay_hourly, cur) + "/hr" : null];
       const scope = r.pay_scope === "market" ? ` <span class="pw-dim">mkt</span>` : r.pay_scope === "median" ? ` <span class="pw-dim">median</span>` : "";
-      const check = badges.verified && r.verified && (r.pay_scope === "company" || r.pay_scope === "reported") ? verifiedCheck(r.pay_scope === "reported" ? "Verified — pay you entered in Known pay" : "Verified — company and pay confirmed") : "";
+      const check = badges.verified && r.verified && (r.pay_scope === "company" || r.pay_scope === "reported")
+        ? verifiedCheck(`Verified · ${r.pay_scope === "reported" ? r.pay_source : r.pay_basis || "company and pay confirmed"}`)
+        : "";
       const payTip = r.pay_period === "month"
         ? `${r.pay_basis || ""}\nMonthly salary. The hourly figure is just an equivalent for comparing (salary × 12 ÷ 2080 hrs).`
         : r.pay_basis || "";

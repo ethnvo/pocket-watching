@@ -102,7 +102,7 @@ function describePay(k) {
       : `${money(k.annual)}/yr`;
   const kind = k.intern ? "intern" : "full-time";
   const housing = k.housing ? `${money(k.housing)}${k.housing_period === "total" ? "" : "/mo"} housing` : "";
-  return `${main} <span class="kind">${kind}</span>${housing ? `<small>${housing}</small>` : ""}`;
+  return `${main} <span class="kind">${kind}</span>${housing ? `<small>${housing}</small>` : ""}${k.source ? `<small class="src">${esc(k.source)}</small>` : ""}`;
 }
 
 async function renderKnown() {
@@ -128,8 +128,8 @@ async function renderKnown() {
   );
 }
 
-function entryFrom(company, role, amount, unit, housing, location) {
-  const e = { company, ...(role ? { role } : {}), ...(location ? { location } : {}) };
+function entryFrom(company, role, amount, unit, housing, location, source) {
+  const e = { company, ...(role ? { role } : {}), ...(location ? { location } : {}), ...(source ? { source } : {}) };
   if (unit === "yr") Object.assign(e, { annual: amount, intern: false });
   else if (unit === "mo") Object.assign(e, { monthly: amount, intern: true });
   else Object.assign(e, { hourly: amount, intern: unit === "hr" });
@@ -152,9 +152,9 @@ $("addForm").onsubmit = async (ev) => {
   const amount = num($("kpAmount").value);
   if (!amount) return $("kpAmount").focus();
   await upsertKnown([
-    entryFrom($("kpCompany").value.trim(), $("kpRole").value.trim(), amount, $("kpUnit").value, num($("kpHousing").value), $("kpLocation").value.trim()),
+    entryFrom($("kpCompany").value.trim(), $("kpRole").value.trim(), amount, $("kpUnit").value, num($("kpHousing").value), $("kpLocation").value.trim(), $("kpSource").value.trim()),
   ]);
-  ["kpCompany", "kpRole", "kpLocation", "kpAmount", "kpHousing"].forEach((id) => ($(id).value = ""));
+  ["kpCompany", "kpRole", "kpLocation", "kpAmount", "kpHousing", "kpSource"].forEach((id) => ($(id).value = ""));
   $("kpCompany").focus();
 };
 
@@ -211,15 +211,16 @@ function renderImport(name, jobs, known) {
         </div>`;
       })
       .join("") +
-    `<div class="import-foot"><button class="ghost" type="button" id="importCancel">Discard</button><button class="primary" type="button" id="importSave">Save to Known pay</button></div>`;
+    `<div class="import-foot"><div class="field" style="margin:0 auto 0 0;min-width:220px"><label for="importSource">Source for these</label><input id="importSource" placeholder="e.g. Summer 2026 offers"></div><button class="ghost" type="button" id="importCancel">Discard</button><button class="primary" type="button" id="importSave">Save to Known pay</button></div>`;
 
+  const k0 = (j) => findKnown(known, j.company, j.title, j.location);
   $("importCancel").onclick = () => { box.hidden = true; };
   $("importSave").onclick = async () => {
     const entries = [];
     jobs.forEach((j, i) => {
       const amount = num($(`ip${i}`).value);
       if (!amount || !j.company) return;
-      entries.push(entryFrom(j.company, j.title, amount, $(`iu${i}`).value, num($(`ih${i}`).value), $(`il${i}`).value.trim()));
+      entries.push(entryFrom(j.company, j.title, amount, $(`iu${i}`).value, num($(`ih${i}`).value), $(`il${i}`).value.trim(), $("importSource").value.trim() || k0(j)?.source));
     });
     if (!entries.length) return flash($("importStatus"), "Fill in pay for at least one job.", "err");
     await upsertKnown(entries);
