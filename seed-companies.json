@@ -7,5 +7,12 @@
     "larp": true,
     "larp_reason": "A startup with 0 users.",
     "v": 2
+  },
+  {
+    "company": "Rivian",
+    "category": "Public co",
+    "stage": null,
+    "note": "Rivian is a publicly traded company (NASDAQ: RIVN since 2021), not a startup.",
+    "v": 1
   }
 ]

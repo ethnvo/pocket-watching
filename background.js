@@ -83,7 +83,7 @@ function normalizePay(item) {
   return out;
 }
 
-const JOB_CACHE = "v17:"; // per-entry job results (estimates); bump to re-run every lookup
+const JOB_CACHE = "v18:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -367,7 +367,7 @@ E) CATEGORY — pick exactly one:
   "Fintech" = payments/financial tech: Visa, Mastercard, PayPal, Block, Plaid, Ramp, Brex, Chime, Affirm.
   "Big Tech" = large established tech not above: Oracle, IBM, Salesforce, Adobe, Intel, Cisco, AMD, Qualcomm, ServiceNow, Workday.
   "Unicorn" = private startup valued at $1B+ not listed above.
-  "Startup" = other startups (set stage when known).
+  "Startup" = other startups (set stage when known). A publicly traded company is NEVER a startup, however young (e.g. Rivian, Lucid, Robinhood, Coinbase are public); neither is a company with thousands of employees.
   Clubs, associations, societies, chapters, design/project teams and anything named "<thing> at <University>" (e.g. "Unmanned Aerial Vehicles at UCI") are "Student org" — never a startup.
   "Bank", "Consulting", "Defense", "Public co" (other public companies), "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed".
   stage: for Startup only (not Unicorn), and ONLY if you found an actual announced funding round ("Seed", "Series A", "Series B", ...). Unfunded/bootstrapped or unknown → null. Never guess "Pre-seed".
@@ -381,6 +381,7 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, in th
   "is_internship": boolean,
   "pay_amount": number | null,         // as quoted by the source
   "pay_period": "hour" | "month" | "year" | null,
+  "skip": boolean,                     // true for everyday non-career jobs (retail, food service, hospitality, rideshare/delivery, babysitting…); if true, other fields may be null
   "employment": "full-time" | "part-time" | "internship" | "contract",
   "level": string | null,              // full-time only, e.g. "E3", "L3", "SDE I"
   "housing_amount": number | null,     // interns only

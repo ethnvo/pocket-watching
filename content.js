@@ -153,6 +153,7 @@
       const section = sectionOf(dateEl);
       if (section !== "Experience" && section !== "Education") continue;
       const kind = section === "Education" ? "edu" : "exp";
+      if (kind === "exp" && isEverydayJob(textOf(dateEl.parentElement), dateEl)) continue;
       const block = dateEl.parentElement;
       if (!block || seen.has(block)) continue;
       seen.add(block);
@@ -165,6 +166,22 @@
       out.push({ key: hash(kind + "\n" + group + "\n" + text), kind, text, group, dateEl });
     }
     return out;
+  }
+
+  // ---------- everyday jobs we don't pocket-watch ----------
+  // Cashier at McDonald's, barista, retail, delivery driving… get no badges and no lookup.
+  const EVERYDAY_TITLE = /\b(cashier|barista|server|waiter|waitress|host|hostess|busser|busboy|dishwasher|(line |prep )?cook|crew (member|trainer)|team member|sales (associate|floor)|retail|stocker|stock associate|merchandiser|shift (lead|leader|manager|supervisor)|delivery driver|driver|courier|dasher|shopper|lifeguard|babysitter|nanny|dog walker|pet sitter|camp counselor|janitor|custodian|valet|front desk|bagger|food runner|bartender|usher|ticket taker|warehouse associate|package handler|picker|packer|brand ambassador)\b/i;
+  const EVERYDAY_EMPLOYER = /\b(mcdonald'?s|starbucks|chipotle|in-n-out|taco bell|wendy'?s|burger king|subway|panda express|chick-fil-a|kfc|popeyes|dunkin|jamba|pizza|boba|tea house|cafe|caf\u00e9|restaurant|target|walmart|costco|trader joe'?s|whole foods|kroger|safeway|ralphs|cvs|walgreens|home depot|lowe'?s|best buy|sephora|ulta|zara|h&m|uniqlo|nordstrom|macy'?s|old navy|amc theatres|regal|kumon|mathnasium|mod pizza|raising cane'?s|sprouts|vons|albertsons)\b/i;
+  const CAREER_TITLE = /engineer|developer|software|programmer|data|analyst|scientist|research|product|design|intern|marketing|finance|consult|account(ant|ing)|operations manager|strategy|it |information technology|security/i;
+
+  function isEverydayJob(text, dateEl) {
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    const title = lines[0] || "";
+    if (CAREER_TITLE.test(title)) return false;
+    const d = lines.findIndex((l) => DATE_RE.test(l));
+    const outer = dateEl.closest(ITEM_SEL)?.parentElement?.closest(ITEM_SEL);
+    const company = d >= 2 ? lines[1] : outer ? textOf(outer).split("\n")[0] : "";
+    return EVERYDAY_TITLE.test(title) || EVERYDAY_EMPLOYER.test(company);
   }
 
   const sectionCache = new WeakMap();
@@ -272,6 +289,11 @@
       return;
     }
     if (e.kind === "edu") return void (row.innerHTML = eduChips(r) + (badges.tenure ? tenureChip(tenure) : ""));
+    if (r.skip) {
+      row.innerHTML = "";
+      row.hidden = true;
+      return;
+    }
     const cur = r.currency || "USD";
     const chips = [];
     const tier = String(r.tier || "").toUpperCase();
