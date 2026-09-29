@@ -20,7 +20,8 @@ async function renderKnown() {
   $("known").innerHTML = knownPay
     .map((k, i) => {
       const amt = k.hourly ? `$${k.hourly}/hr${k.intern ? " (intern)" : ""}` : k.monthly ? `$${Number(k.monthly).toLocaleString()}/mo (intern)` : `$${Number(k.annual).toLocaleString()}/yr`;
-      return `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0"><b>${esc(k.company)}</b></td><td>${esc(k.role || "any role")}</td><td>${amt}</td><td style="text-align:right"><a href="#" data-i="${i}">remove</a></td></tr>`;
+      const housing = k.housing ? ` + $${Number(k.housing).toLocaleString()}${k.housing_period === "total" ? "" : "/mo"} housing` : "";
+      return `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0"><b>${esc(k.company)}</b></td><td>${esc(k.role || "any role")}</td><td>${amt}${housing}</td><td style="text-align:right"><a href="#" data-i="${i}">remove</a></td></tr>`;
     })
     .join("");
   $("known").querySelectorAll("a[data-i]").forEach((a) => (a.onclick = async (ev) => {
@@ -42,10 +43,12 @@ $("kpAdd").onclick = async () => {
   if (unit === "yr") Object.assign(entry, { annual: amount, intern: false });
   else if (unit === "mo") Object.assign(entry, { monthly: amount, intern: true });
   else Object.assign(entry, { hourly: amount, intern: unit === "hr" });
+  const housing = parseFloat($("kpHousing").value.replace(/[$,]/g, ""));
+  if (housing) Object.assign(entry, { housing, housing_period: "month" });
   const { knownPay = [] } = await chrome.storage.local.get("knownPay");
   knownPay.push(entry);
   await chrome.storage.local.set({ knownPay });
-  ["kpCompany", "kpRole", "kpAmount"].forEach((id) => ($(id).value = ""));
+  ["kpCompany", "kpRole", "kpAmount", "kpHousing"].forEach((id) => ($(id).value = ""));
   renderKnown();
   flash("Added");
 };

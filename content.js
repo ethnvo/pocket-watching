@@ -207,12 +207,22 @@
       chips.push(`<span class="pw-chip pw-unpaid" title="${esc(r.pay_basis || "")}">unpaid</span>`);
     } else if (r.pay_hourly || r.pay_annual) {
       const parts = r.is_internship
-        ? [hourlyStr(r.pay_hourly, cur) + "/hr", r.pay_monthly ? money(r.pay_monthly, cur, 0) + "/mo" : null]
+        ? [hourlyStr(r.pay_hourly, cur) + "/hr", r.pay_paycheck ? money(r.pay_paycheck, cur, 0) + "/check" : null]
         : [money(r.pay_annual, cur, 0, true) + "/yr", r.pay_hourly ? hourlyStr(r.pay_hourly, cur) + "/hr" : null];
       const scope =
         r.pay_scope === "reported" ? ` <span class="pw-dim">✓</span>` :
         r.pay_scope === "company" ? "" : ` <span class="pw-dim">mkt</span>`;
-      chips.push(`<span class="pw-chip pw-pay" title="${esc(r.pay_basis || "")}">${parts.filter(Boolean).join(" · ")}${scope}</span>`);
+      const payTip = `${r.pay_basis || ""}\nPaycheck = biweekly (80 hrs).`;
+      chips.push(`<span class="pw-chip pw-pay" title="${esc(payTip)}">${parts.filter(Boolean).join(" · ")}${scope}</span>`);
+      if (r.is_internship && r.housing_amount) {
+        const h = r.housing_period === "month" ? `${money(r.housing_amount, cur, 0)}/mo` : money(r.housing_amount, cur, 0);
+        chips.push(`<span class="pw-chip pw-housing" title="Housing stipend${r.housing_period === "month" ? " (monthly)" : " (lump sum)"}">🏠 +${h} housing</span>`);
+      }
+      if (r.is_internship && r.total_with_housing) {
+        const tip = `12-week internship = 6 biweekly paychecks (480 hrs): ${money(r.pay_total, cur, 0)}` +
+          (r.housing_total ? ` + ${money(r.housing_total, cur, 0)} housing` : "") + " (pre-tax).";
+        chips.push(`<span class="pw-chip pw-total" title="${esc(tip)}">≈${money(r.total_with_housing, cur, 1, true)} / 12 wks</span>`);
+      }
     } else if (r.pay_basis) {
       chips.push(`<span class="pw-chip pw-dim" title="${esc(r.pay_basis)}">pay n/a</span>`);
     }

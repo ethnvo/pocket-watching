@@ -22,11 +22,12 @@
   <h2 style="font-size:16px;margin-top:32px">Known pay</h2>
   <p class="hint">Exact pay you know for a company/role. Overrides Gemini's estimate and shows a ✓ on the badge. Leave role blank to apply to any role at that company.</p>
   <table id="known" style="width:100%;border-collapse:collapse;font-size:13px"></table>
-  <div style="display:grid;grid-template-columns:1.2fr 1.4fr .7fr .9fr auto;gap:6px;align-items:end;margin-top:8px">
+  <div style="display:grid;grid-template-columns:1.1fr 1.2fr .6fr .9fr .8fr auto;gap:6px;align-items:end;margin-top:8px">
     <input id="kpCompany" placeholder="Company">
     <input id="kpRole" placeholder="Role (optional)">
     <input id="kpAmount" placeholder="Pay" inputmode="decimal">
     <select id="kpUnit" style="padding:8px;border:1px solid #ccd;border-radius:8px;font:inherit"><option value="hr">/hr intern</option><option value="mo">/mo intern</option><option value="hrft">/hr full-time</option><option value="yr">/yr full-time</option></select>
+    <input id="kpHousing" placeholder="Housing/mo" inputmode="decimal">
     <button id="kpAdd" style="margin:0">Add</button>
   </div>
   <script src="options.js"></script>

@@ -2,27 +2,42 @@
 // grounding) per batch of experience entries: prestige tier + pay for each.
 
 const DEFAULT_MODEL = "gemini-2.5-flash";
-// Pay conversions: 40 hrs/week × 52 weeks ÷ 12 months ≈ 173.3 hrs/month, 2080 hrs/year.
-// Internship length / which months it runs doesn't matter — a monthly stipend is just
-// hourly × 173.3 (and vice versa).
-const HOURS_PER_MONTH = (40 * 52) / 12;
+// Pay math. Everything is derived from an hourly rate at 40 hrs/week:
+//  - paycheck (biweekly)  = hourly × 80
+//  - internship total     = hourly × 40 × INTERN_WEEKS  (12 weeks = 6 paychecks)
+//  - a quoted "monthly" salary is annual/12 → hourly = monthly × 12 / 2080
+// Housing stipends are added on top of the internship total (monthly ones prorated
+// over the internship: 12 weeks ≈ 2.77 months).
 const HOURS_PER_YEAR = 40 * 52;
+const HOURS_PER_PAYCHECK = 80;
+const INTERN_WEEKS = 12;
+const INTERN_MONTHS = (INTERN_WEEKS * 12) / 52;
+const round2 = (n) => Math.round(n * 100) / 100;
+
+function toHourly(amount, period) {
+  const a = Number(amount);
+  if (!a || !period) return null;
+  return period === "hour" ? a : period === "month" ? (a * 12) / HOURS_PER_YEAR : a / HOURS_PER_YEAR;
+}
+
+function withPayMath(item, hourly) {
+  if (item.unpaid || !hourly) return item;
+  const out = { ...item, pay_hourly: round2(hourly), pay_paycheck: Math.round(hourly * HOURS_PER_PAYCHECK) };
+  if (item.is_internship) {
+    const housing = Number(item.housing_amount) || 0;
+    const housingTotal = item.housing_period === "month" ? housing * INTERN_MONTHS : housing;
+    out.pay_annual = null;
+    out.pay_total = Math.round(hourly * 40 * INTERN_WEEKS);
+    out.housing_total = Math.round(housingTotal) || null;
+    out.total_with_housing = Math.round(out.pay_total + housingTotal);
+  } else {
+    out.pay_annual = Math.round(item.pay_period === "year" ? Number(item.pay_amount) : hourly * HOURS_PER_YEAR);
+  }
+  return out;
+}
 
 function normalizePay(item) {
-  const amt = Number(item.pay_amount);
-  const period = item.pay_period;
-  if (item.unpaid || !amt || !period) {
-    // Backward compat with results that already carry converted fields.
-    return item;
-  }
-  const hourly =
-    period === "hour" ? amt : period === "month" ? amt / HOURS_PER_MONTH : amt / HOURS_PER_YEAR;
-  return {
-    ...item,
-    pay_hourly: Math.round(hourly * 100) / 100,
-    pay_monthly: item.is_internship ? Math.round(period === "month" ? amt : hourly * HOURS_PER_MONTH) : null,
-    pay_annual: item.is_internship ? null : Math.round(period === "year" ? amt : hourly * HOURS_PER_YEAR),
-  };
+  return withPayMath(item, toHourly(item.pay_amount, item.pay_period));
 }
 
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
@@ -33,7 +48,7 @@ const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shar
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const coKey = (company) => `co2:${norm(company)}`;
 const payKey = (company, title, location, intern) =>
-  `pay:${norm(company)}|${norm(title)}|${norm(location)}|${intern ? "intern" : "ft"}`;
+  `pay2:${norm(company)}|${norm(title)}|${norm(location)}|${intern ? "intern" : "ft"}`;
 
 chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 
@@ -81,11 +96,11 @@ function pump() {
 
 async function lookup(entries, profile) {
   const results = {};
-  const keys = entries.map((e) => `v6:${e.key}`);
+  const keys = entries.map((e) => `v7:${e.key}`);
   const cached = await chrome.storage.local.get(keys);
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`v6:${e.key}`];
+    const hit = cached[`v7:${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
@@ -135,7 +150,8 @@ SPEED: Be fast. For well-known companies (big tech, quant firms, major banks, we
 B) PAY. Rules, in priority order:
   1. Use COMPANY-SPECIFIC pay for that role first: Levels.fyi (including its intern pages), Glassdoor/Indeed company salary pages, H-1B/LCA data, or published intern rates. Big tech intern pay is well documented (e.g. Amazon SDE interns in Seattle earn roughly $50-60/hr) — do NOT substitute a generic market "intern median" when company data exists.
   2. Only if no company data exists, use the market median for that title in that metro, and set pay_scope to "market".
-  3. Report the pay figure exactly as your source quotes it — don't convert it yourself. Set pay_amount to that number and pay_period to "hour", "month" or "year" (e.g. an intern stipend quoted as $9,000/month → pay_amount 9000, pay_period "month"). Conversions are done downstream.
+  3. Report the pay figure exactly as your source quotes it — don't convert it yourself. Set pay_amount to that number and pay_period to "hour", "month" or "year" (e.g. an intern salary quoted as $9,000/month → pay_amount 9000, pay_period "month"). Conversions are done downstream.
+  3b. Internship HOUSING: if the company gives a housing stipend/relocation for interns, set housing_amount and housing_period ("month" for a monthly stipend, "total" for a lump sum). Big tech usually does (e.g. a monthly housing stipend or a lump sum). If none or unknown, null.
   4. Full-time: use median BASE annual salary. Internships: never annualize.
   5. Founder/self-employed/volunteer/unpaid: pay fields null, explain in pay_basis.
 
@@ -177,6 +193,8 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, in th
   "is_internship": boolean,
   "pay_amount": number | null,         // as quoted by the source
   "pay_period": "hour" | "month" | "year" | null,
+  "housing_amount": number | null,     // interns only
+  "housing_period": "month" | "total" | null,
   "currency": string,                  // ISO code, e.g. "USD"
   "pay_scope": "company" | "market",
   "pay_basis": string,                 // one short sentence: what the number is and where it came from
@@ -232,7 +250,7 @@ ${list}`;
     const item = e ? normalizePay(raw) : raw;
     if (!e) continue;
     results[e.key] = item;
-    toStore[`v6:${e.key}`] = { at: Date.now(), data: item };
+    toStore[`v7:${e.key}`] = { at: Date.now(), data: item };
 
     // Feed the shared cache (keyed on the scraped hint so the next lookup can find it).
     const h = e.hint || {};
@@ -246,7 +264,7 @@ ${list}`;
     if (!item.unpaid && !item.larp && item.pay_scope === "company" && (item.pay_hourly || item.pay_annual)) {
       const intern = /intern|co-?op/i.test(h.type + " " + h.title);
       const pay = item.is_internship
-        ? `$${item.pay_hourly}/hr intern`
+        ? `$${item.pay_hourly}/hr intern${item.housing_amount ? ` + $${item.housing_amount}${item.housing_period === "month" ? "/mo" : " lump-sum"} housing` : ""}`
         : `$${item.pay_annual}/yr base`;
       toStore[payKey(h.company, h.title, h.location, intern)] = {
         at: Date.now(),
@@ -303,19 +321,20 @@ function applyKnownPay(results, entries, list) {
     const k = findKnownPay(list, e.hint?.company || r.company, e.hint?.title || r.role);
     if (!k) continue;
     const intern = k.intern ?? r.is_internship;
-    const hourly = k.hourly ?? (k.monthly ? k.monthly / HOURS_PER_MONTH : k.annual ? k.annual / HOURS_PER_YEAR : null);
-    results[e.key] = {
+    const hourly = k.hourly ?? toHourly(k.monthly, "month") ?? toHourly(k.annual, "year");
+    const base = {
       ...r,
       unpaid: false,
       is_internship: intern,
-      pay_hourly: hourly ? Math.round(hourly * 100) / 100 : null,
-      pay_monthly: intern && hourly ? Math.round(k.monthly ?? hourly * HOURS_PER_MONTH) : null,
-      pay_annual: intern ? null : k.annual ?? (hourly ? Math.round(hourly * HOURS_PER_YEAR) : null),
+      pay_amount: k.annual ?? null,
+      pay_period: k.annual ? "year" : null,
+      ...(k.housing != null ? { housing_amount: k.housing, housing_period: k.housing_period || "month" } : {}),
       currency: k.currency || "USD",
       pay_scope: "reported",
       pay_basis: `Reported pay${k.role ? ` for ${k.role}` : ""} at ${k.company} (from your Known pay list).`,
       verified: true,
     };
+    results[e.key] = withPayMath(base, hourly);
   }
   return results;
 }
