@@ -45,7 +45,8 @@ No. The extension only downloads a JSON data file; all code ships in the package
 - Not sold, not used for anything unrelated to the feature, not used for creditworthiness or lending.
 - Privacy policy URL: https://github.com/ethnvo/pocket-watching/blob/main/PRIVACY.md
 
-## Assets you still need to make
-- **Screenshots** (at least 1, 1280×800 or 640×400): take them on your own LinkedIn profile, not someone else's.
-- **Small promo tile** (440×280), optional.
-- Icon: `icons/128.png`, already in the repo.
+## Assets
+- **Screenshots** (1280×800): `store/screenshots/1-experience.png`, `2-larp.png`, `3-education.png`, taken on the author's own profile.
+- **Demo GIF** (for the README or social): `docs/demo.gif`.
+- **Icon:** `icons/128.png`.
+- **Small promo tile** (440×280): optional, not made yet.
