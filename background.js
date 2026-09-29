@@ -65,6 +65,13 @@ function medianFallback(item, refs, location) {
 // Titles that only make sense at a real (big) company — wildly inflated on a club.
 const GRANDIOSE = /member of (the )?technical staff|\bmts\b|forward[- ]deployed|founding engineer|research (scientist|engineer)|staff (software )?engineer|principal engineer|distinguished|\bchief\b|\bc[etfo]o\b|head of (ai|ml|engineering|research|product)|vp of (engineering|ai|product)|director of (engineering|ai|ml|research)|quant(itative)? (researcher|trader|developer)|\bai (researcher|engineer)\b/i;
 
+// "Unicorn" needs a reported $1B+ valuation with a source; otherwise it's a Startup.
+function checkUnicorn(item) {
+  if (item.category !== "Unicorn") return item;
+  if (Number(item.valuation) >= 1e9 && item.valuation_source) return item;
+  return { ...item, category: "Startup" };
+}
+
 // MANGO membership is decided by name, not by the model.
 const MANGO = /^(meta|facebook|instagram|whatsapp|anthropic|nvidia|google|alphabet|deepmind|google deepmind|youtube|openai)\b/;
 function applyMango(item, company) {
@@ -83,7 +90,7 @@ function normalizePay(item) {
   return out;
 }
 
-const JOB_CACHE = "v18:"; // per-entry job results (estimates); bump to re-run every lookup
+const JOB_CACHE = "v19:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -366,7 +373,7 @@ E) CATEGORY — pick exactly one:
   "Hedge Fund" = hedge funds & multi-managers: Citadel, Two Sigma, DE Shaw, Bridgewater, Millennium, Point72, Renaissance.
   "Fintech" = payments/financial tech: Visa, Mastercard, PayPal, Block, Plaid, Ramp, Brex, Chime, Affirm.
   "Big Tech" = large established tech not above: Oracle, IBM, Salesforce, Adobe, Intel, Cisco, AMD, Qualcomm, ServiceNow, Workday.
-  "Unicorn" = private startup valued at $1B+ not listed above.
+  "Unicorn" = private startup with a REPORTED valuation of $1B+ (from a funding announcement or reliable press) and not listed above. Only use it if you can state the valuation and its source in valuation / valuation_source; otherwise use "Startup".
   "Startup" = other startups (set stage when known). A publicly traded company is NEVER a startup, however young (e.g. Rivian, Lucid, Robinhood, Coinbase are public); neither is a company with thousands of employees.
   Clubs, associations, societies, chapters, design/project teams and anything named "<thing> at <University>" (e.g. "Unmanned Aerial Vehicles at UCI") are "Student org" — never a startup.
   "Bank", "Consulting", "Defense", "Public co" (other public companies), "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed".
@@ -392,6 +399,8 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, in th
   "tier": "THANOS" | "S" | "A" | "B" | "MID" | "C" | "D",
   "category": string,
   "stage": string | null,
+  "valuation": number | null,          // latest reported valuation in USD (Unicorn requires it), e.g. 1150000000
+  "valuation_source": string | null,   // e.g. "Series C, Feb 2026 (TechCrunch)"
   "yc_batch": string | null,           // Y Combinator batch if it's a YC company, e.g. "W24", "S25"; else null
   "larp": boolean,
   "larp_reason": string | null,
@@ -416,7 +425,7 @@ ${list}`;
   for (const raw of arr) {
     const e = misses[raw?.i];
     if (!e) continue;
-    const item = medianFallback(normalizePay(applyMango(raw, e.hint?.company)), refsByKey[e.key], e.hint?.location || raw.location);
+    const item = medianFallback(normalizePay(checkUnicorn(applyMango(raw, e.hint?.company))), refsByKey[e.key], e.hint?.location || raw.location);
     // "Incoming …" is announcing an offer, not LARPing — in the entry itself, or in a
     // headline that names this entry's company.
     const headlineIncoming = /\bincoming\b/i.test(profile.headline || "") && e.hint?.company &&

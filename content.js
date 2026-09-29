@@ -386,6 +386,10 @@
     return r.is_internship ? "internship" : "full-time";
   }
 
+  function fmtValuation(n) {
+    return n >= 1e9 ? `$${(n / 1e9).toFixed(n >= 1e10 ? 0 : 2).replace(/\.?0+$/, "")}B` : `$${Math.round(n / 1e6)}M`;
+  }
+
   function verifiedCheck(tip) {
     return `<span class="pw-check" data-tip="${esc(tip)}"><svg viewBox="0 0 16 16" width="13" height="13" aria-label="verified"><circle cx="8" cy="8" r="8" fill="#1d9bf0"/><path d="M4.5 8.2l2.3 2.3 4.7-4.9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
   }
@@ -492,7 +496,10 @@
     const c = CATEGORIES[name] || { cls: "plain", icon: "" };
     // Funding round only means something for regular startups; a unicorn is just $1B+.
     const label = name === "Startup" && r.stage ? `${r.stage} startup` : name === "University" ? "University position" : name;
-    const tip = CATEGORY_TIPS[name];
+    const tip =
+      name === "Unicorn" && r.valuation
+        ? `Unicorn: a private startup valued at $1B+.\n\nValued at ${fmtValuation(r.valuation)}${r.valuation_source ? ` · ${r.valuation_source}` : ""}.`
+        : CATEGORY_TIPS[name];
     return `<span class="pw-chip pw-cat pw-c-${c.cls}"${tip ? ` data-tip="${esc(tip)}"` : ""}>${c.icon ? `<span class="pw-ico">${c.icon}</span>` : ""}<span class="pw-lbl">${esc(label)}</span></span>`;
   }
 
