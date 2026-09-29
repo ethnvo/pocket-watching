@@ -41,6 +41,11 @@
 .pw-ten-super { background: #fff4d6; color: #8a5a00; }
 .pw-ten-superduper { background: #ffe1d6; color: #9a3412; font-weight: 800; letter-spacing: .3px; }
 
+/* Y Combinator */
+.pw-yc { background: #fff1e8; color: #c2410c; gap: 6px; padding-left: 4px; font-weight: 700; }
+.pw-yc-y { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 3px; background: #f26522; color: #fff; font: 800 10px/1 -apple-system, sans-serif; }
+html.pw-dark .pw-yc { background: #3a2216; color: #ffb38a; }
+
 /* company categories */
 .pw-cat { font-weight: 700; }
 .pw-ico { font-size: 11px; line-height: 1; }

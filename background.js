@@ -185,11 +185,11 @@ function pump() {
 
 async function lookup(entries, profile) {
   const results = {};
-  const keys = entries.map((e) => `v11:${e.key}`);
+  const keys = entries.map((e) => `v12:${e.key}`);
   const cached = await chrome.storage.local.get(keys);
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`v11:${e.key}`];
+    const hit = cached[`v12:${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
@@ -254,7 +254,7 @@ async function lookup(entries, profile) {
 
 A) Parse: role title, company, location, and the REAL employment type. Don't trust the title alone:
   - Use the Education section (and headline, e.g. "Student at X", "CS @ UCI") to work out when they were/are enrolled. A role held while they were a student — current or past — is almost always an internship, co-op or part-time job even if it's titled "Software Engineer" and not tagged "Internship". Treat it as an internship for pay.
-  - LARP: set larp=true when a student (or someone clearly pre-graduation at the time) lists a full-time-sounding title (e.g. "Software Engineer", "Product Manager", "CTO", "Founder & CEO" of something with no real footprint) that is really an internship, part-time gig, club/project, or inflated title. Explain in larp_reason. Don't flag roles already clearly labeled Internship/Intern/Co-op/Part-time.
+  - LARP: set larp=true when a student (or someone clearly pre-graduation at the time) lists a full-time-sounding title (e.g. "Software Engineer", "Product Manager", "CTO", "Founder & CEO" of something with no real footprint) that is really an internship, part-time gig, club/project, or inflated title. Explain in larp_reason. Don't flag roles already clearly labeled Internship/Intern/Co-op/Part-time. Never flag "incoming"/future roles (e.g. "Incoming SWE Intern", "Incoming Software Engineer @ X", or a start date in the future) — announcing an upcoming offer is fine.
   - UNPAID: school clubs, student orgs, university project teams, hackathon teams, research-for-credit, volunteering, and personal projects are unpaid — set unpaid=true, pay fields null, category "Student org" (or "Volunteer" for volunteering). Paid university jobs (TA, paid research assistant) are NOT unpaid.
 
 SPEED: Be fast. For well-known companies (big tech, quant firms, major banks, well-known startups) answer from your own knowledge — do NOT search. Only use Google Search for companies or pay you genuinely don't know, and use at most 2 searches total.
@@ -314,6 +314,7 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, in th
   "tier": "THANOS" | "S" | "A" | "B" | "MID" | "C" | "D",
   "category": string,
   "stage": string | null,
+  "yc_batch": string | null,           // Y Combinator batch if it's a YC company, e.g. "W24", "S25"; else null
   "larp": boolean,
   "larp_reason": string | null,
   "unpaid": boolean,
@@ -338,8 +339,16 @@ ${list}`;
     const e = misses[raw?.i];
     if (!e) continue;
     const item = medianFallback(normalizePay(raw), refsByKey[e.key], e.hint?.location || raw.location);
+    // "Incoming …" is announcing an offer, not LARPing — in the entry itself, or in a
+    // headline that names this entry's company.
+    const headlineIncoming = /\bincoming\b/i.test(profile.headline || "") && e.hint?.company &&
+      norm(profile.headline).includes(norm(e.hint.company).split(" ")[0]);
+    if (item.larp && (/\bincoming\b/i.test(e.text) || headlineIncoming)) {
+      item.larp = false;
+      item.larp_reason = null;
+    }
     results[e.key] = item;
-    toStore[`v11:${e.key}`] = { at: Date.now(), data: item };
+    toStore[`v12:${e.key}`] = { at: Date.now(), data: item };
 
     // Feed the shared cache (keyed on the scraped hint so the next lookup can find it).
     const h = e.hint || {};

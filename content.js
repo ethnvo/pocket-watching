@@ -178,7 +178,9 @@
       (el) => el.childElementCount === 0 && DATE_RE.test(el.textContent) && sectionOf(el) === "Education"
     );
     const eduSection = eduDate && findSection(eduDate);
-    if (eduSection) education = tidy(eduSection.el.innerText).slice(0, 1500);
+    // textOf() skips our own badge rows — otherwise every school badge update would
+    // change the context hash, re-key every job and flash them back to "checking…".
+    if (eduSection) education = textOf(eduSection.el).slice(0, 1500);
 
     const sl = slug();
     if (education) {
@@ -243,6 +245,7 @@
     const row = rowFor(e);
     const sig = r ? `done|${badgesKey}${tenure ? "|" + tenure.label : ""}` : "loading";
     if (row.dataset.sig === sig) return;
+    if (!r && row.dataset.sig?.startsWith("done")) return; // once loaded, stay loaded
     row.dataset.sig = sig;
     if (!r) {
       row.innerHTML = `<span class="pw-chip pw-wait"><span class="pw-spin"></span>${e.kind === "edu" ? "checking school…" : "checking pockets…"}</span>`;
@@ -256,10 +259,13 @@
       chips.push(`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`);
     }
     if (badges.larp && r.larp) {
-      chips.push(`<span class="pw-chip pw-larp" title="${esc(r.larp_reason || "Listed as a full-time title while still in school")}">LARP</span>`);
+      const larpTip = `LARP: a full-time-sounding title for what was really an internship, part-time gig, club, side project or inflated title — held while still in school.\n\nWhy: ${r.larp_reason || "Listed as a full-time title while still in school."}`;
+      chips.push(`<span class="pw-chip pw-larp" title="${esc(larpTip)}">LARP</span>`);
     }
     const cat = badges.category ? categoryChip(r) : "";
     if (cat) chips.push(cat);
+    const yc = badges.category ? ycBatch(r, e) : null;
+    if (yc) chips.push(`<span class="pw-chip pw-yc" title="Y Combinator ${esc(yc)} batch"><span class="pw-yc-y">Y</span>${esc(yc === "YC" ? "Combinator" : yc)}</span>`);
     if (badges.unverified && r.verified === false) {
       chips.push(`<span class="pw-chip pw-unverified" title="${esc(r.verify_note || "Couldn't confirm this company/role or its pay online")}">unverified</span>`);
     }
@@ -306,6 +312,14 @@
         scan();
       }
     };
+  }
+
+  // YC batch: from the company name ("Acme (YC W24)") or the model's yc_batch.
+  function ycBatch(r, e) {
+    const m = `${e.text}\n${e.group}`.match(/\(?\bYC\s*[-–]?\s*([WSFX]\s?'?\d{2}|(?:Winter|Summer|Fall|Spring)\s*'?\d{2,4})\)?/i);
+    if (m) return m[1].replace(/\s|'/g, "").replace(/^(Winter|Summer|Fall|Spring)(\d{2,4})$/i, (_, t, y) => t[0].toUpperCase() + y.slice(-2)).toUpperCase();
+    const b = String(r.yc_batch || "").trim();
+    return b ? b.replace(/^YC\s*/i, "") || "YC" : null;
   }
 
   function verifiedCheck(tip) {
