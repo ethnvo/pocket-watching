@@ -54,9 +54,11 @@ To make an estimate, the text of the entry being looked up (title, company, date
 
 ## Install
 
-1. Get a free Gemini API key at https://aistudio.google.com/apikey.
-2. In Chrome, go to `chrome://extensions`, turn on **Developer mode** and click **Load unpacked**, then choose this folder.
-3. Paste the key on the settings page that opens, then open any LinkedIn profile.
+1. Clone this repo: `git clone https://github.com/ethnvo/pocket-watching.git`
+2. **Clear the author's seed data** (recommended). `seed-pay.json` and `seed-companies.json` ship with the author's own offers and startup, and they load as *confirmed* pay on first install. Replace both files' contents with `[]`, or add your own entries.
+3. Get a free Gemini API key at https://aistudio.google.com/apikey.
+4. In Chrome, go to `chrome://extensions`, turn on **Developer mode** and click **Load unpacked**, then choose this folder.
+5. Paste the key on the settings page that opens, then open any LinkedIn profile.
 
 After pulling changes, click the reload icon on the extension in `chrome://extensions` and refresh LinkedIn.
 
@@ -66,3 +68,11 @@ After pulling changes, click the reload icon on the extension in `chrome://exten
 - `background.js` calls Gemini, applies confirmed pay, location rules and the median fallback, and caches results.
 - `options.html`, `options.css` and `options.js` are the settings page.
 - `seed-pay.json` and `seed-companies.json` are confirmed pay and company overrides loaded on install. Your own entries live in Chrome storage.
+
+## Contributing
+
+Issues and pull requests are welcome. There's no build step: edit the files, reload the extension in `chrome://extensions` and refresh LinkedIn. LinkedIn changes its markup often, so if badges stop appearing, `findEntries()` in `content.js` is the place to look.
+
+## License
+
+[MIT](LICENSE) © 2026 Ethan Vo
