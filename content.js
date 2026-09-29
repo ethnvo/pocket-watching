@@ -423,7 +423,7 @@
       const source = r.pay_scope === "reported" || r.pay_scope === "edited" || r.pay_scope === "community" ? "" : r.pay_basis ? `Source: ${r.pay_basis}` : "";
       const payTip = [how, what, source].filter(Boolean).join("\n\n");
       const refining = r.refining ? ` <span class="pw-dim" data-tip="Double-checking this number…">checking…</span>` : "";
-      chips.push(`<span class="pw-chip pw-pay" data-tip="${esc(payTip)}">${parts.filter(Boolean).join(" ")}${scope}${check}${refining}</span>`);
+      chips.push(`<span class="pw-chip pw-pay${r.pay_scope === "market" ? " pw-pay-est" : ""}" data-tip="${esc(payTip)}">${parts.filter(Boolean).join(" ")}${scope}${check}${refining}</span>`);
       if (badges.housing && r.is_internship && r.housing_amount) {
         const h = r.housing_period === "month" ? `${money(r.housing_amount, cur, 0)}/mo` : money(r.housing_amount, cur, 0);
         // Housing is labeled on its own: its number can come from a different place than the pay.
