@@ -325,7 +325,7 @@
             : [hourlyStr(r.pay_hourly, cur) + "/hr"];
       // Blue check = confirmed by you (Known pay). Everything found online is an estimate.
       const confirmed = r.pay_scope === "reported";
-      const scope = confirmed ? "" : ` <span class="pw-dim">${{ market: "mkt", median: "median", edited: "edited" }[r.pay_scope] || "est."}</span>`;
+      const scope = confirmed ? "" : ` <span class="pw-dim">${{ market: "est. mkt", median: "median", edited: "edited" }[r.pay_scope] || "approx."}</span>`;
       const check = badges.verified && confirmed ? verifiedCheck(`Confirmed · ${r.pay_source}`) : "";
       const what =
         kind === "full-time"
@@ -336,8 +336,8 @@
       const how = {
         reported: `Confirmed by you · ${r.pay_source || "Known pay"}`,
         edited: "Estimate you corrected in Settings. Not confirmed.",
-        company: "Estimate: pay found online for this company and role. Not confirmed, so it could be off.",
-        market: `Estimate: no company-specific data found, so this is typical pay for the title${r.location ? ` in ${r.location}` : ""}.`,
+        company: "Approximate: pay found online for this company and role. Not confirmed, so it could be off.",
+        market: `Estimated market rate: no pay found for this company, so this is typical pay for the title${r.location ? ` in ${r.location}` : ""}.`,
         median: "Estimate: the median of pay known for this role at this company in other US locations.",
       }[r.pay_scope] || "Estimate. Not confirmed.";
       const source = r.pay_scope === "reported" || r.pay_scope === "edited" ? "" : r.pay_basis ? `Source: ${r.pay_basis}` : "";

@@ -21,7 +21,7 @@ Open any LinkedIn profile (or its full Experience / Education page) and badges a
 
 **Confirmed vs. estimated pay**
 - **Confirmed** is pay you entered yourself (from an offer letter, say). It's exact, permanent and shows a blue check with its source ("Confirmed · Fall 2026 offer"). Pay is location-specific: a Seattle offer only confirms Seattle.
-- **Estimated** is everything else, found by Gemini with Google Search and tagged `est.`, `mkt` (typical pay for the title) or `median` (the median of known US locations for that role, used when nothing better turns up). Hover any pay badge to see what kind of estimate it is and where it came from.
+- **Estimated** is everything else, found by Gemini with Google Search and tagged `approx.` (pay found for that company and role), `est. mkt` (typical pay for the title when nothing company-specific turns up) or `median` (the median of known US locations for that role, used when nothing better turns up). Hover any pay badge to see what kind of estimate it is and where it came from.
 - Settings lets you browse every estimate, fix wrong ones, promote them to confirmed, or delete them.
 
 **Settings** (click the extension icon)

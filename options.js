@@ -250,7 +250,7 @@ function estPay(d) {
   if (d.pay_period === "month") return `${money(d.pay_amount)}/mo`;
   return `${money(d.pay_hourly, Number.isInteger(d.pay_hourly) ? 0 : 2)}/hr`;
 }
-const SCOPE_LABEL = { company: "est.", market: "mkt", median: "median", edited: "edited", reported: "confirmed" };
+const SCOPE_LABEL = { company: "approx.", market: "est. mkt", median: "median", edited: "edited", reported: "confirmed" };
 
 async function renderEstimates() {
   const all = await chrome.storage.local.get(null);
@@ -267,7 +267,7 @@ async function renderEstimates() {
       return `<div class="row" data-key="${esc(r.key)}">
         <span><b>${esc(r.h.company || r.d.company || "Unknown")}</b><span class="role" style="display:block">${esc(r.h.title || r.d.role || "")}</span>
           <span class="who">${esc(r.h.location || r.d.location || "")}${r.who ? ` · from ${esc(r.who)}` : ""}</span></span>
-        <span class="pay">${esc(estPay(r.d))}<span class="tags"><span class="tag${scope === "edited" ? " edited" : ""}">${SCOPE_LABEL[scope] || "est."}</span>${r.d.category ? `<span class="tag">${esc(r.d.category)}</span>` : ""}</span></span>
+        <span class="pay">${esc(estPay(r.d))}<span class="tags"><span class="tag${scope === "edited" ? " edited" : ""}">${SCOPE_LABEL[scope] || "approx."}</span>${r.d.category ? `<span class="tag">${esc(r.d.category)}</span>` : ""}</span></span>
         <span class="who">${new Date(r.at).toLocaleDateString()}</span>
         <span class="row-actions">
           <button type="button" data-act="edit">Edit</button>
