@@ -72,6 +72,8 @@ function checkUnicorn(item) {
   return { ...item, category: "Startup" };
 }
 
+const ORDINARY_TITLE = /\b(president|vice president|vp|treasurer|secretary|officer|chair(person)?|co-?chair|board member|member|coordinator|organizer|tech(nical)? lead|team lead|lead|developer|technical developer|maintainer|webmaster|mentor|tutor|volunteer|ambassador|representative|director of (events|marketing|outreach|finance|operations)|events|marketing|outreach)\b/i;
+
 // MANGO membership is decided by name, not by the model.
 const MANGO = /^(meta|facebook|instagram|whatsapp|anthropic|nvidia|google|alphabet|deepmind|google deepmind|youtube|openai)\b/;
 function applyMango(item, company) {
@@ -90,7 +92,7 @@ function normalizePay(item) {
   return out;
 }
 
-const JOB_CACHE = "v20:"; // per-entry job results (estimates); bump to re-run every lookup
+const JOB_CACHE = "v21:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -437,7 +439,16 @@ ${list}`;
     // title (Member of Technical Staff, Forward Deployed Engineer, CTO…) always is.
     const org = `${e.hint?.company || ""} ${e.group || ""}`;
     const looksStudentOrg = /\b(club|society|association|chapter|student|fraternity|sorority)\b|\bat (uc ?\w+|ucla|ucsd|ucsb|uci|university|college)\b/i.test(org);
-    if (looksStudentOrg && item.category === "Startup") item.category = "Student org";
+    if (looksStudentOrg) {
+      // The model sometimes calls club roles "Startup" or even "Big Tech" and prices them.
+      // A club is a club: unpaid, no pay estimate, no compliment.
+      Object.assign(item, {
+        category: "Student org", stage: null, tier: null, unpaid: true,
+        pay_amount: null, pay_period: null, pay_hourly: null, pay_annual: null, pay_paycheck: null,
+        housing_amount: null, housing_period: null, pay_scope: null, verify_note: null,
+        pay_basis: "Student organization — unpaid.",
+      });
+    }
     if (looksStudentOrg || /^(Student org|Volunteer)$/.test(item.category || "")) {
       const title = e.hint?.title || item.role || "";
       if (GRANDIOSE.test(title)) {
@@ -447,6 +458,12 @@ ${list}`;
         item.larp = false;
         item.larp_reason = null;
       }
+    }
+    // Ordinary titles are never LARP, anywhere — it has to be obscene.
+    const title = e.hint?.title || item.role || "";
+    if (item.larp && ORDINARY_TITLE.test(title) && !GRANDIOSE.test(title)) {
+      item.larp = false;
+      item.larp_reason = null;
     }
     if (item.larp && (/\bincoming\b/i.test(e.text) || headlineIncoming)) {
       item.larp = false;
