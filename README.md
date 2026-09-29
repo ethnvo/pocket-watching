@@ -55,6 +55,12 @@ Open any LinkedIn profile (or its full Experience / Education page) and badges a
 
 To make an estimate, the text of the entry being looked up (title, company, dates, location, description) plus the person's headline and Education section is sent to the Google Gemini API using your own API key, under Google's terms. The extension also downloads `community-pay.json` from GitHub (nothing is sent). Nothing else leaves your browser. See [PRIVACY.md](PRIVACY.md). Results are cached locally, so revisiting a profile doesn't send it again.
 
+## Cost
+
+It runs on your own Gemini API key. With Gemini 2.5 Flash, a lookup costs about $0.002 in tokens, and web searches are free up to 1,500 a day (then $35 per 1,000). A typical profile is around 10 lookups, so normal use is effectively free. Revisits, confirmed pay and community pay cost nothing, and school lookups don't use web search.
+
+To be safe, it stops new lookups for the day at **1,000 web searches or 2,000 lookups**. Background pay double-checks stop at 80% of the search limit. Settings → Data shows today's usage and estimated cost, and lets you change the limits. On a free-tier key with no billing, it costs nothing but Google may use requests to improve its products.
+
 ## Install
 
 1. Clone this repo: `git clone https://github.com/ethnvo/pocket-watching.git`

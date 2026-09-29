@@ -140,6 +140,17 @@
           </div>
         </div>
         <p id="dataStatus" class="status" role="status"></p>
+
+        <div class="store usage">
+          <h3>Gemini usage today</h3>
+          <p class="store-desc">Web searches are free up to 1,500 a day, then $35 per 1,000. Tokens cost $0.30 per million in and $2.50 per million out. When a limit is hit, new lookups pause until tomorrow; saved results keep showing.</p>
+          <p class="stat" id="usageStat">…</p>
+          <div class="limits">
+            <div class="field"><label for="dailySearchLimit">Web searches per day</label><input id="dailySearchLimit" inputmode="numeric"></div>
+            <div class="field"><label for="dailyCallLimit">Lookups per day</label><input id="dailyCallLimit" inputmode="numeric"></div>
+            <button id="saveLimits" class="ghost" type="button">Save limits</button>
+          </div>
+        </div>
       </section>
     </main>
   </div>

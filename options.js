@@ -454,11 +454,36 @@ $("importConfirmed").onchange = async () => {
   }
 };
 
+// ---------- usage + limits ----------
+const DEFAULT_LIMITS = { dailySearchLimit: 1000, dailyCallLimit: 2000 }; // keep in sync with background.js
+async function renderUsage() {
+  const k = `usage:${new Date().toLocaleDateString("en-CA")}`;
+  const u = (await chrome.storage.local.get(k))[k] || { calls: 0, searches: 0, inTok: 0, outTok: 0 };
+  const limits = { ...DEFAULT_LIMITS, ...(await chrome.storage.sync.get(Object.keys(DEFAULT_LIMITS))) };
+  const cost = u.inTok * 0.3e-6 + u.outTok * 2.5e-6 + Math.max(0, u.searches - 1500) * 0.035;
+  $("usageStat").textContent =
+    `${u.calls.toLocaleString()} of ${limits.dailyCallLimit.toLocaleString()} lookups, ` +
+    `${u.searches.toLocaleString()} of ${limits.dailySearchLimit.toLocaleString()} web searches. ` +
+    `Estimated cost today: $${cost < 0.01 && cost > 0 ? "<0.01" : cost.toFixed(2)}.`;
+  $("dailySearchLimit").value = limits.dailySearchLimit;
+  $("dailyCallLimit").value = limits.dailyCallLimit;
+}
+$("saveLimits").onclick = async () => {
+  const a = Math.max(0, Math.round(num($("dailySearchLimit").value)));
+  const b = Math.max(0, Math.round(num($("dailyCallLimit").value)));
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return flash($("dataStatus"), "Limits must be numbers.", "err");
+  await chrome.storage.sync.set({ dailySearchLimit: a, dailyCallLimit: b });
+  flash($("dataStatus"), a > 1500 ? "Limits saved. Above 1,500 searches a day, each search costs $0.035." : "Limits saved.");
+  renderUsage();
+};
+setInterval(renderUsage, 10000);
+
 chrome.storage.onChanged?.addListener((ch, area) => {
   if (area === "local" && (ch.knownPay || ch.knownCompanies)) countConfirmed();
 });
 
 renderKnown();
 renderEstimates();
+renderUsage();
 countCache();
 countConfirmed();

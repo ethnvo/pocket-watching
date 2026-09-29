@@ -144,7 +144,7 @@
     chrome.runtime.sendMessage({ type: "pw:lookup", kind: e.kind, entries: [entry], profile }, (resp) => {
       pending.delete(e.key);
       const err = chrome.runtime.lastError?.message || (!resp?.ok && (resp?.error || "Unknown error"));
-      if (err === "NO_KEY") lastError = err;
+      if (err === "NO_KEY" || err === "DAILY_LIMIT") lastError = err;
       else if (err) errors.set(e.key, err);
       else if (resp.results[e.key]) results.set(e.key, resp.results[e.key]);
       else errors.set(e.key, "No result for this entry");
@@ -405,11 +405,15 @@
     if (row.dataset.sig === "err") return;
     row.dataset.sig = "err";
     const noKey = err === "NO_KEY";
-    row.innerHTML = `<span class="pw-chip pw-err" data-tip="${esc(err)}">⌚ ${noKey ? "add Gemini key" : "lookup failed — retry"}</span>`;
+    const limit = err === "DAILY_LIMIT";
+    const tip = limit
+      ? "Pocket Watching paused new lookups for today to keep Gemini costs down. Saved results still show. Raise the limit in Settings → Data, or check back tomorrow."
+      : err;
+    row.innerHTML = `<span class="pw-chip ${limit ? "pw-wait" : "pw-err"}" data-tip="${esc(tip)}">⌚ ${noKey ? "add Gemini key" : limit ? "daily limit reached" : "lookup failed — retry"}</span>`;
     row.firstChild.onclick = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      if (noKey) chrome.runtime.sendMessage({ type: "pw:options" });
+      if (noKey || limit) chrome.runtime.sendMessage({ type: "pw:options" });
       else {
         errors.delete(e.key);
         scan();

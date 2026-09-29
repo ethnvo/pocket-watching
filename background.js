@@ -145,7 +145,7 @@ Check Levels.fyi first, then Glassdoor/Blind submissions, then official posting 
 If you can't find exact data, you MUST still give your best estimate for this role, level and location from comparable data — never return null for a real paid job. Set "estimate": true when it's an estimate.
 Respond with ONLY a JSON array with one object: [{"pay_amount": number, "pay_period": "hour" | "month" | "year", "level": string | null, "estimate": boolean, "pay_basis": string}] — pay_basis names the source or what the estimate is based on.`;
   try {
-    const [r] = await callGemini(prompt, apiKey, model);
+    const [r] = await callGemini(prompt, apiKey, model, { refinement: true });
     const c = cleanPay({ ...r });
     const hourly = toHourly(c.pay_amount, c.pay_period);
     if (hourly) {
@@ -174,7 +174,7 @@ A previous lookup found $${item.pay_hourly}/hr (${item.pay_basis || "unknown sou
 Use Levels.fyi or Glassdoor/Blind submissions for this exact role (or the official posting range). Do NOT use ZipRecruiter, Salary.com, Payscale or other modeled averages.
 Respond with ONLY a JSON array with one object: [{"pay_amount": number | null, "pay_period": "hour" | "month" | null, "pay_basis": string}] — pay_basis names the source.`;
   try {
-    const [r] = await callGemini(prompt, apiKey, model);
+    const [r] = await callGemini(prompt, apiKey, model, { refinement: true });
     const hourly = toHourly(r?.pay_amount, r?.pay_period);
     if (hourly && hourly > item.pay_hourly) {
       return withPayMath({ ...item, pay_amount: r.pay_amount, pay_period: r.pay_period, pay_basis: `${r.pay_basis} (re-checked)` }, hourly);
@@ -212,8 +212,10 @@ chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 // Drop results from older cache versions so storage (read on every lookup) stays small.
 chrome.runtime.onInstalled.addListener(async () => {
   const all = await chrome.storage.local.get(null);
+  const monthAgo = new Date(Date.now() - 30 * 864e5).toLocaleDateString("en-CA");
   const stale = Object.keys(all).filter(
-    (k) => (/^v\d+:/.test(k) && !k.startsWith(JOB_CACHE)) || /^(entry|cache|school1|co|co2|pay):/.test(k)
+    (k) => (/^v\d+:/.test(k) && !k.startsWith(JOB_CACHE)) || /^(entry|cache|school1|co|co2|pay):/.test(k) ||
+      (k.startsWith("usage:") && k.slice(6) < monthAgo)
   );
   if (stale.length) await chrome.storage.local.remove(stale);
 });
@@ -798,7 +800,39 @@ function applyKnownPay(results, entries, list, scope = "reported") {
   return results;
 }
 
-async function callGemini(prompt, apiKey, model) {
+// ---------- Usage + spending guard ----------
+// Gemini 2.5 Flash: $0.30 / 1M input tokens, $2.50 / 1M output, Google Search grounding
+// free for 1,500 prompts a day then $35 / 1,000. Limits are per day and set in Settings.
+const PRICE = { in: 0.3 / 1e6, out: 2.5 / 1e6, search: 35 / 1000, freeSearches: 1500 };
+const DEFAULT_LIMITS = { dailySearchLimit: 1000, dailyCallLimit: 2000 };
+const usageKey = () => `usage:${new Date().toLocaleDateString("en-CA")}`; // YYYY-MM-DD, local
+
+async function getUsage() {
+  const k = usageKey();
+  return (await chrome.storage.local.get(k))[k] || { calls: 0, searches: 0, inTok: 0, outTok: 0 };
+}
+async function getLimits() {
+  return { ...DEFAULT_LIMITS, ...(await chrome.storage.sync.get(Object.keys(DEFAULT_LIMITS))) };
+}
+// true once the day's budget is used up (refinements stop earlier, at 80% of the search limit)
+async function overBudget({ refinement = false, search = true } = {}) {
+  const [u, l] = await Promise.all([getUsage(), getLimits()]);
+  if (u.calls >= l.dailyCallLimit) return true;
+  return search && u.searches >= l.dailySearchLimit * (refinement ? 0.8 : 1);
+}
+async function recordUsage(body, searched) {
+  const k = usageKey();
+  const u = await getUsage();
+  const m = body?.usageMetadata || {};
+  u.calls += 1;
+  u.searches += searched ? 1 : 0;
+  u.inTok += m.promptTokenCount || 0;
+  u.outTok += (m.candidatesTokenCount || 0) + (m.thoughtsTokenCount || 0);
+  await chrome.storage.local.set({ [k]: u });
+}
+
+async function callGemini(prompt, apiKey, model, { search = true, refinement = false } = {}) {
+  if (await overBudget({ refinement, search })) throw new Error("DAILY_LIMIT");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
     model || DEFAULT_MODEL
   )}:generateContent`;
@@ -808,7 +842,7 @@ async function callGemini(prompt, apiKey, model) {
     headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      tools: [{ google_search: {} }],
+      ...(search ? { tools: [{ google_search: {} }] } : {}),
       generationConfig: {
         temperature: 0.2,
         // 2.5-series models think by default, which is most of the latency. This task
@@ -819,6 +853,9 @@ async function callGemini(prompt, apiKey, model) {
   });
 
   const body = await res.json().catch(() => ({}));
+  // a grounded prompt is billed when the model actually ran a search
+  const searched = !!body.candidates?.[0]?.groundingMetadata?.webSearchQueries?.length;
+  await recordUsage(body, searched);
   if (!res.ok) throw new Error(body?.error?.message || `Gemini HTTP ${res.status}`);
 
   const text = (body.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
@@ -871,7 +908,7 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, same 
 ENTRIES:
 ${list}`;
 
-  const arr = await callGemini(prompt, apiKey, model);
+  const arr = await callGemini(prompt, apiKey, model, { search: false }); // schools don't need a web search
   const toStore = {};
   for (const item of arr) {
     const e = misses[item?.i];
