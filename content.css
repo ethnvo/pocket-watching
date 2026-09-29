@@ -30,7 +30,7 @@
 .pw-t-D { background: #eeeeee; color: #6a6a6a; }
 
 /* flags */
-.pw-larp { background: #eeeeee; color: #7a7a7a; font-weight: 500; text-decoration: line-through; text-decoration-color: #b0b0b0; }
+.pw-larp { background: #eeeeee; color: #6a6a6a; font-weight: 600; }
 .pw-unpaid { background: #f3f0e6; color: #7a6b3a; }
 .pw-unverified { background: transparent; color: #8a6d00; box-shadow: 0 0 0 1px #d8c26a inset; font-weight: 500; }
 

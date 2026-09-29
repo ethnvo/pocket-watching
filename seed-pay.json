@@ -24,5 +24,15 @@
     "intern": true,
     "v": 3,
     "location": "Culver City, California"
+  },
+  {
+    "company": "Amazon",
+    "role": "SDE Intern",
+    "monthly": 9400,
+    "housing": 2900,
+    "housing_period": "month",
+    "intern": true,
+    "location": "Seattle, Washington",
+    "v": 1
   }
 ]

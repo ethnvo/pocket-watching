@@ -90,7 +90,9 @@ chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 chrome.runtime.onInstalled.addListener(async () => {
   const have = await chrome.storage.local.get(["knownPay", "knownCompanies", "seededIds"]);
   const load = (f) => fetch(chrome.runtime.getURL(f)).then((r) => r.json()).catch(() => []);
-  const id = (k) => `${norm(k.company)}|${norm(k.role)}`;
+  // Rows are identified by company + role + location (pay is location-specific).
+  const id = (k) => `${norm(k.company)}|${norm(k.role)}|${norm(k.location)}`;
+  const coRole = (k) => `${norm(k.company)}|${norm(k.role)}`;
   // Seed rows carry an optional version "v"; bumping it pushes the new row to existing installs.
   const seedId = (k) => `${id(k)}@${k.v || 1}`;
   const seeded = new Set(have.seededIds || []);
@@ -100,7 +102,9 @@ chrome.runtime.onInstalled.addListener(async () => {
     for (const row of seed) {
       if (seeded.has(seedId(row)) || (!row.v && seeded.has(id(row)))) continue;
       seeded.add(seedId(row));
-      const i = out.findIndex((k) => id(k) === id(row));
+      // same row, or an older copy of it saved before rows had a location
+      let i = out.findIndex((k) => id(k) === id(row));
+      if (i < 0 && row.location) i = out.findIndex((k) => !k.location && coRole(k) === coRole(row));
       if (i >= 0) out[i] = row; else out.push(row);
     }
     return out;
