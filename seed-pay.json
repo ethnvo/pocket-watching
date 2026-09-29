@@ -38,5 +38,17 @@
     "location": "Seattle, Washington",
     "v": 2,
     "source": "Fall 2026 offer"
+  },
+  {
+    "company": "Meta",
+    "role": "Software Engineer Intern",
+    "hourly": 55,
+    "housing": 3900,
+    "housing_period": "month",
+    "intern": true,
+    "reference": true,
+    "source": "Friend's summer 2025 offer (unconfirmed)",
+    "v": 2,
+    "location": "Menlo Park, California"
   }
 ]

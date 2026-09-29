@@ -102,7 +102,7 @@ function describePay(k) {
       : `${money(k.annual)}/yr`;
   const kind = k.intern ? "intern" : "full-time";
   const housing = k.housing ? `${money(k.housing)}${k.housing_period === "total" ? "" : "/mo"} housing` : "";
-  return `${main} <span class="kind">${kind}</span>${housing ? `<small>${housing}</small>` : ""}${k.source ? `<small class="src">${esc(k.source)}</small>` : ""}`;
+  return `${main} <span class="kind">${kind}${k.reference ? " · reference only" : ""}</span>${housing ? `<small>${housing}</small>` : ""}${k.source ? `<small class="src">${esc(k.source)}</small>` : ""}`;
 }
 
 async function renderKnown() {
@@ -128,8 +128,8 @@ async function renderKnown() {
   );
 }
 
-function entryFrom(company, role, amount, unit, housing, location, source) {
-  const e = { company, ...(role ? { role } : {}), ...(location ? { location } : {}), ...(source ? { source } : {}) };
+function entryFrom(company, role, amount, unit, housing, location, source, reference) {
+  const e = { company, ...(role ? { role } : {}), ...(location ? { location } : {}), ...(source ? { source } : {}), ...(reference ? { reference: true } : {}) };
   if (unit === "yr") Object.assign(e, { annual: amount, intern: false });
   else if (unit === "mo") Object.assign(e, { monthly: amount, intern: true });
   else Object.assign(e, { hourly: amount, intern: unit === "hr" });
@@ -152,9 +152,10 @@ $("addForm").onsubmit = async (ev) => {
   const amount = num($("kpAmount").value);
   if (!amount) return $("kpAmount").focus();
   await upsertKnown([
-    entryFrom($("kpCompany").value.trim(), $("kpRole").value.trim(), amount, $("kpUnit").value, num($("kpHousing").value), $("kpLocation").value.trim(), $("kpSource").value.trim()),
+    entryFrom($("kpCompany").value.trim(), $("kpRole").value.trim(), amount, $("kpUnit").value, num($("kpHousing").value), $("kpLocation").value.trim(), $("kpSource").value.trim(), $("kpReference").checked),
   ]);
   ["kpCompany", "kpRole", "kpLocation", "kpAmount", "kpHousing", "kpSource"].forEach((id) => ($(id).value = ""));
+  $("kpReference").checked = false;
   $("kpCompany").focus();
 };
 
@@ -178,11 +179,13 @@ $("importForm").onsubmit = (ev) => {
 };
 
 // Same matching as the badges: "Amazon Music" counts as "Amazon"; a role-specific row wins.
+const canonCompany = (s) => norm(s).replace(/^(facebook( inc)?|meta platforms( inc)?)\b/, "meta");
+
 function findKnown(list, company, title, location) {
-  const c = norm(company);
+  const c = canonCompany(company);
   const city = (l) => norm(String(l || "").split(",")[0]).replace(/\b(greater|metropolitan|metro|area|region|bay)\b/g, " ").trim();
   const here = (k) => !k.location || !location || city(k.location).includes(city(location)) || city(location).includes(city(k.location));
-  const hits = list.filter((k) => { const kc = norm(k.company); return kc && (c === kc || c.startsWith(kc + " ")) && here(k); });
+  const hits = list.filter((k) => { const kc = canonCompany(k.company); return kc && (c === kc || c.startsWith(kc + " ")) && here(k); });
   return hits.find((k) => k.role && norm(title).includes(norm(k.role))) || hits.find((k) => !k.role) || null;
 }
 

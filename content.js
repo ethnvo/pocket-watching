@@ -7,6 +7,26 @@
   const TIER_LABELS = { THANOS: "THANOS tier", S: "S tier", A: "A tier", B: "B tier", MID: "Mid tier", C: "C tier", D: "D tier" };
   const ITEM_SEL = '[componentkey^="entity-collection-item"]';
 
+  // Instant tooltips for badges (native title tooltips are slow and flaky inside
+  // LinkedIn's entry links).
+  const tipEl = document.createElement("div");
+  tipEl.className = "pw-tip";
+  tipEl.hidden = true;
+  document.documentElement.appendChild(tipEl);
+  document.addEventListener("mouseover", (ev) => {
+    const t = ev.target.closest?.(".pw-row [data-tip]");
+    if (!t || !t.dataset.tip) return void (tipEl.hidden = true);
+    tipEl.textContent = t.dataset.tip;
+    tipEl.hidden = false;
+    const b = t.getBoundingClientRect();
+    const w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+    const left = Math.min(Math.max(8, b.left + b.width / 2 - w / 2), innerWidth - w - 8);
+    const top = b.bottom + 8 + h > innerHeight ? b.top - h - 8 : b.bottom + 8;
+    tipEl.style.left = `${left}px`;
+    tipEl.style.top = `${top}px`;
+  });
+  addEventListener("scroll", () => (tipEl.hidden = true), true);
+
   const results = new Map();   // entry key -> result
   const pending = new Set();   // keys currently being looked up
   let lastError = null;         // global errors only (e.g. no API key)
@@ -256,43 +276,48 @@
     const chips = [];
     const tier = String(r.tier || "").toUpperCase();
     if (badges.tiers && SHOWN_TIERS.has(tier)) {
-      chips.push(`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`);
+      chips.push(`<span class="pw-chip pw-tier pw-t-${tier}" data-tip="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`);
     }
     if (badges.larp && r.larp) {
       const larpTip = `LARP: a full-time-sounding title for what was really an internship, part-time gig, club, side project or inflated title — held while still in school.\n\nWhy: ${r.larp_reason || "Listed as a full-time title while still in school."}`;
-      chips.push(`<span class="pw-chip pw-larp" title="${esc(larpTip)}">LARP</span>`);
+      chips.push(`<span class="pw-chip pw-larp" data-tip="${esc(larpTip)}">LARP</span>`);
     }
     const cat = badges.category ? categoryChip(r) : "";
     if (cat) chips.push(cat);
     const yc = badges.category ? ycBatch(r, e) : null;
-    if (yc) chips.push(`<span class="pw-chip pw-yc" title="Y Combinator ${esc(yc)} batch"><span class="pw-yc-y">Y</span>${esc(yc === "YC" ? "Combinator" : yc)}</span>`);
+    if (yc) chips.push(`<span class="pw-chip pw-yc" data-tip="Y Combinator ${esc(yc)} batch"><span class="pw-yc-y">Y</span>${esc(yc === "YC" ? "Combinator" : yc)}</span>`);
     if (badges.unverified && r.verified === false) {
-      chips.push(`<span class="pw-chip pw-unverified" title="${esc(r.verify_note || "Couldn't confirm this company/role or its pay online")}">unverified</span>`);
+      chips.push(`<span class="pw-chip pw-unverified" data-tip="${esc(r.verify_note || "Couldn't confirm this company/role or its pay online")}">unverified</span>`);
     }
     if (!badges.pay) {
       // pay badges off
     } else if (r.unpaid) {
-      chips.push(`<span class="pw-chip pw-unpaid" title="${esc(r.pay_basis || "")}">unpaid</span>`);
+      chips.push(`<span class="pw-chip pw-unpaid" data-tip="${esc(r.pay_basis || "")}">unpaid</span>`);
     } else if (r.pay_hourly || r.pay_annual) {
-      const parts = r.is_internship
-        ? r.pay_period === "month"
-          ? [money(r.pay_amount, cur, 0) + "/mo", `<span class="pw-dim">≈${hourlyStr(r.pay_hourly, cur)}/hr</span>`]
-          : [hourlyStr(r.pay_hourly, cur) + "/hr"]
-        : [money(r.pay_annual, cur, 0, true) + "/yr", r.pay_hourly ? hourlyStr(r.pay_hourly, cur) + "/hr" : null];
+      const kind = employmentOf(r, e);
+      const parts =
+        kind === "full-time"
+          ? [`${money(r.pay_annual, cur, 0, true)} TC`, r.level ? `<span class="pw-dim">${esc(r.level)}</span>` : null]
+          : r.pay_period === "month"
+            ? [money(r.pay_amount, cur, 0) + "/mo", `<span class="pw-dim">≈${hourlyStr(r.pay_hourly, cur)}/hr</span>`]
+            : [hourlyStr(r.pay_hourly, cur) + "/hr"];
       const scope = r.pay_scope === "market" ? ` <span class="pw-dim">mkt</span>` : r.pay_scope === "median" ? ` <span class="pw-dim">median</span>` : "";
       const check = badges.verified && r.verified && (r.pay_scope === "company" || r.pay_scope === "reported")
         ? verifiedCheck(`Verified · ${r.pay_scope === "reported" ? r.pay_source : r.pay_basis || "company and pay confirmed"}`)
         : "";
-      const payTip = r.pay_period === "month"
-        ? `${r.pay_basis || ""}\nMonthly salary. The hourly figure is just an equivalent for comparing (salary × 12 ÷ 2080 hrs).`
-        : r.pay_basis || "";
-      chips.push(`<span class="pw-chip pw-pay" title="${esc(payTip)}">${parts.filter(Boolean).join(" ")}${scope}${check}</span>`);
+      const payTip =
+        kind === "full-time"
+          ? `Total compensation per year (base + stock + bonus)${r.level ? ` at ${r.level}` : ""}. Without a level in the title, this assumes the new-grad level.\n\n${r.pay_basis || ""}`
+          : r.pay_period === "month"
+            ? `${r.pay_basis || ""}\n\nMonthly salary. The hourly figure is just an equivalent for comparing (salary × 12 ÷ 2080 hrs).`
+            : r.pay_basis || "";
+      chips.push(`<span class="pw-chip pw-pay" data-tip="${esc(payTip)}">${parts.filter(Boolean).join(" ")}${scope}${check}</span>`);
       if (badges.housing && r.is_internship && r.housing_amount) {
         const h = r.housing_period === "month" ? `${money(r.housing_amount, cur, 0)}/mo` : money(r.housing_amount, cur, 0);
-        chips.push(`<span class="pw-chip pw-housing" title="Housing stipend${r.housing_period === "month" ? " (monthly)" : " (lump sum)"}">🏠 ${h} housing</span>`);
+        chips.push(`<span class="pw-chip pw-housing" data-tip="Housing stipend${r.housing_period === "month" ? " (monthly)" : " (lump sum)"}">🏠 ${h} housing</span>`);
       }
     } else if (r.pay_basis) {
-      chips.push(`<span class="pw-chip pw-dim" title="${esc(r.pay_basis)}">pay n/a</span>`);
+      chips.push(`<span class="pw-chip pw-dim" data-tip="${esc(r.pay_basis)}">pay n/a</span>`);
     }
     row.innerHTML = chips.join("");
   }
@@ -302,7 +327,7 @@
     if (row.dataset.sig === "err") return;
     row.dataset.sig = "err";
     const noKey = err === "NO_KEY";
-    row.innerHTML = `<span class="pw-chip pw-err" title="${esc(err)}">⌚ ${noKey ? "add Gemini key" : "lookup failed — retry"}</span>`;
+    row.innerHTML = `<span class="pw-chip pw-err" data-tip="${esc(err)}">⌚ ${noKey ? "add Gemini key" : "lookup failed — retry"}</span>`;
     row.firstChild.onclick = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
@@ -322,14 +347,22 @@
     return b ? b.replace(/^YC\s*/i, "") || "YC" : null;
   }
 
+  // internship / part-time / contract are shown hourly (or monthly); full-time as TC.
+  function employmentOf(r, e) {
+    const t = String(r.employment || "").toLowerCase();
+    if (t) return t;
+    if (/·\s*(part-time|contract|freelance|seasonal)/i.test(e.text)) return "part-time";
+    return r.is_internship ? "internship" : "full-time";
+  }
+
   function verifiedCheck(tip) {
-    return `<span class="pw-check" title="${esc(tip)}"><svg viewBox="0 0 16 16" width="13" height="13" aria-label="verified"><circle cx="8" cy="8" r="8" fill="#1d9bf0"/><path d="M4.5 8.2l2.3 2.3 4.7-4.9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+    return `<span class="pw-check" data-tip="${esc(tip)}"><svg viewBox="0 0 16 16" width="13" height="13" aria-label="verified"><circle cx="8" cy="8" r="8" fill="#1d9bf0"/><path d="M4.5 8.2l2.3 2.3 4.7-4.9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
   }
 
   function eduChips(r) {
     const tier = String(r.tier || "").toUpperCase();
     if (!TIER_LABELS[tier]) return ""; // high school, certificates, etc.
-    const chips = badges.tiers && SHOWN_TIERS.has(tier) ? [`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`] : [];
+    const chips = badges.tiers && SHOWN_TIERS.has(tier) ? [`<span class="pw-chip pw-tier pw-t-${tier}" data-tip="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`] : [];
     if (badges.school && r.label) chips.push(`<span class="pw-chip pw-cat pw-c-school"><span class="pw-ico">🎓</span>${esc(r.label)}</span>`);
     return chips.join("");
   }
@@ -388,7 +421,7 @@
   }
 
   function tenureChip(t) {
-    return t ? `<span class="pw-chip pw-tenure pw-ten-${t.cls}" title="${esc(t.tip)}">${esc(t.label)}</span>` : "";
+    return t ? `<span class="pw-chip pw-tenure pw-ten-${t.cls}" data-tip="${esc(t.tip)}">${esc(t.label)}</span>` : "";
   }
 
   const CATEGORIES = {
@@ -416,7 +449,7 @@
     if (!name) return "";
     const c = CATEGORIES[name] || { cls: "plain", icon: "" };
     // Funding round only means something for regular startups; a unicorn is just $1B+.
-    const label = name === "Startup" && r.stage ? `${r.stage} startup` : name;
+    const label = name === "Startup" && r.stage ? `${r.stage} startup` : name === "University" ? "University position" : name;
     return `<span class="pw-chip pw-cat pw-c-${c.cls}">${c.icon ? `<span class="pw-ico">${c.icon}</span>` : ""}<span class="pw-lbl">${esc(label)}</span></span>`;
   }
 

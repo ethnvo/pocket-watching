@@ -54,7 +54,7 @@ function medianFallback(item, refs, location) {
       pay_amount: amount,
       pay_period: period,
       pay_scope: "median",
-      pay_basis: `${why} the median across ${refs.length} known US location${refs.length === 1 ? "" : "s"} (${refs.map((r) => r.location).join("; ")}).`,
+      pay_basis: `${why} the median of ${refs.length} known US data point${refs.length === 1 ? "" : "s"} for this role (${refs.map((r) => r.location + (r.src === "unconfirmed" ? ", unconfirmed" : "")).join("; ")}).`,
       verified: item.verified !== false || /far below typical/.test(item.verify_note || ""),
       verify_note: null,
     },
@@ -80,9 +80,18 @@ const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shar
 // Shared-cache keys: the same company / role+location seen on a different profile
 // is fed back to the model as known facts so it doesn't search again.
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-const coKey = (company) => `co2:${norm(company)}`;
+// Company aliases → one canonical name (applies to known pay, references and the shared cache).
+const COMPANY_ALIASES = { facebook: "meta", "meta platforms": "meta", "facebook inc": "meta", "meta platforms inc": "meta" };
+const canonCompany = (s) => {
+  const n = norm(s);
+  for (const [alias, canon] of Object.entries(COMPANY_ALIASES)) {
+    if (n === alias || n.startsWith(alias + " ")) return canon + n.slice(alias.length);
+  }
+  return n;
+};
+const coKey = (company) => `co2:${canonCompany(company)}`;
 const payKey = (company, title, location, intern) =>
-  `pay2:${norm(company)}|${norm(title)}|${norm(location)}|${intern ? "intern" : "ft"}`;
+  `pay2:${canonCompany(company)}|${norm(title)}|${norm(location)}|${intern ? "intern" : "ft"}`;
 
 chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 
@@ -185,11 +194,11 @@ function pump() {
 
 async function lookup(entries, profile) {
   const results = {};
-  const keys = entries.map((e) => `v12:${e.key}`);
+  const keys = entries.map((e) => `v13:${e.key}`);
   const cached = await chrome.storage.local.get(keys);
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`v12:${e.key}`];
+    const hit = cached[`v13:${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
@@ -223,8 +232,14 @@ async function lookup(entries, profile) {
     const h = e.hint || {};
     if (!h.company) continue;
     const { exact, refs } = knownPayFor(knownPay, h.company, h.title, h.location, internOf(h));
-    const list = refs.map((k) => ({ location: k.location, hourly: knownHourly(k), period: knownPeriod(k), src: "reported" }));
-    const prefix = `pay2:${norm(h.company)}|${norm(h.title)}|`;
+    const list = refs.map((k) => ({
+      location: k.location || "US, location unknown",
+      hourly: knownHourly(k),
+      period: knownPeriod(k),
+      housing: k.housing || null,
+      src: k.reference ? "unconfirmed" : "reported",
+    }));
+    const prefix = `pay2:${canonCompany(h.company)}|${norm(h.title)}|`;
     for (const [key, v] of Object.entries(allStored)) {
       if (!key.startsWith(prefix) || !v?.hourly || !v.location || Date.now() - v.at > SHARED_TTL_MS) continue;
       if (h.location && sameLocation(v.location, h.location)) continue;
@@ -235,8 +250,8 @@ async function lookup(entries, profile) {
       refsByKey[e.key] = us;
       const where = h.location ? `in ${h.location}` : "for this entry's location";
       facts.push(
-        `Reference pay for "${h.title}" at ${h.company} in OTHER locations — pay varies by location, so look up the figure ${where} specifically: ` +
-        us.map((x) => `${x.location}: ${x.period === "month" ? `$${Math.round((x.hourly * HOURS_PER_YEAR) / 12)}/month` : x.period === "year" ? `$${Math.round(x.hourly * HOURS_PER_YEAR)}/yr` : `$${x.hourly}/hr`}`).join("; ") + "."
+        `Reference pay for "${h.title}" at ${h.company} (pay varies by location, so look up the figure ${where} specifically): ` +
+        us.map((x) => `${x.location}: ${x.period === "month" ? `$${Math.round((x.hourly * HOURS_PER_YEAR) / 12)}/month` : x.period === "year" ? `$${Math.round(x.hourly * HOURS_PER_YEAR)}/yr` : `$${x.hourly}/hr`}${x.housing ? ` + $${x.housing}/month housing` : ""}${x.src === "unconfirmed" ? " (unconfirmed secondhand report)" : ""}`).join("; ") + "."
       );
     }
     if (exact) {
@@ -265,7 +280,8 @@ B) PAY. Rules, in priority order:
   2. Only if no company data exists, use the market median for that title in that metro, and set pay_scope to "market".
   3. Report the pay figure exactly as your source quotes it — don't convert it yourself. Set pay_amount to that number and pay_period to "hour", "month" or "year" (e.g. an intern salary quoted as $9,000/month → pay_amount 9000, pay_period "month"). Conversions are done downstream.
   3b. Internship HOUSING: if the company gives a housing stipend/relocation for interns, set housing_amount and housing_period ("month" for a monthly stipend, "total" for a lump sum). Big tech usually does (e.g. a monthly housing stipend or a lump sum). If none or unknown, null.
-  4. Full-time: use median BASE annual salary. Internships: never annualize.
+  4. Full-time: report median TOTAL COMPENSATION per year (TC = base + annualized stock + bonus) as pay_amount with pay_period "year". Assume the NEW-GRAD / entry level unless the title states a higher one (Senior, Staff, Principal, Lead, II/III, …). Put the company's level name in "level" (e.g. Meta E3, Google L3, Amazon SDE I, Microsoft 59, Apple ICT2, Netflix L4). Levels.fyi is the best source. Internships: never annualize.
+  4b. Part-time, contract and on-campus/university jobs: hourly pay (pay_period "hour").
   5. Founder/self-employed/volunteer/unpaid: pay fields null, explain in pay_basis.
 
 C) PRESTIGE TIER — how impressive/selective THIS SPECIFIC ROLE at THIS company is. The role matters as much as the company: rate the seat, not the logo.
@@ -306,6 +322,8 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, in th
   "is_internship": boolean,
   "pay_amount": number | null,         // as quoted by the source
   "pay_period": "hour" | "month" | "year" | null,
+  "employment": "full-time" | "part-time" | "internship" | "contract",
+  "level": string | null,              // full-time only, e.g. "E3", "L3", "SDE I"
   "housing_amount": number | null,     // interns only
   "housing_period": "month" | "total" | null,
   "currency": string,                  // ISO code, e.g. "USD"
@@ -348,7 +366,7 @@ ${list}`;
       item.larp_reason = null;
     }
     results[e.key] = item;
-    toStore[`v12:${e.key}`] = { at: Date.now(), data: item };
+    toStore[`v13:${e.key}`] = { at: Date.now(), data: item };
 
     // Feed the shared cache (keyed on the scraped hint so the next lookup can find it).
     const h = e.hint || {};
@@ -363,7 +381,7 @@ ${list}`;
       const intern = /intern|co-?op/i.test(h.type + " " + h.title);
       const pay = item.is_internship
         ? `$${item.pay_hourly}/hr intern${item.housing_amount ? ` + $${item.housing_amount}${item.housing_period === "month" ? "/mo" : " lump-sum"} housing` : ""}`
-        : `$${item.pay_annual}/yr base`;
+        : `$${item.pay_annual}/yr TC${item.level ? ` (${item.level})` : ""}`;
       toStore[payKey(h.company, h.title, h.location, intern)] = {
         at: Date.now(),
         location: h.location || item.location || null,
@@ -380,7 +398,7 @@ ${list}`;
 // ---------- Known (user-reported) pay: always wins over the model's estimate ----------
 
 const sameCompany = (known, scraped) => {
-  const k = norm(known), c = norm(scraped);
+  const k = canonCompany(known), c = canonCompany(scraped);
   return !!k && !!c && (c === k || c.startsWith(k + " "));
 };
 
@@ -423,9 +441,10 @@ function knownPayFor(list, company, title, location, intern) {
   const byCo = list.filter((k) => sameCompany(k.company, company) && (intern == null || (k.intern ?? true) === intern));
   const roleHits = byCo.filter((k) => k.role && roleMatch(k.role, title));
   const pool = roleHits.length ? roleHits : byCo.filter((k) => !k.role);
+  // "reference" rows (unconfirmed numbers) never apply exactly — they only inform.
   const exact =
-    pool.find((k) => !k.location || !location || sameLocation(k.location, location)) || null;
-  const refs = pool.filter((k) => k !== exact && k.location);
+    pool.find((k) => !k.reference && (!k.location || !location || sameLocation(k.location, location))) || null;
+  const refs = pool.filter((k) => k !== exact && (k.location || k.reference));
   return { exact, refs };
 }
 // Intern if LinkedIn tags it (or the title says so); else trust the model's call if we have one.

@@ -1,5 +1,13 @@
 .pw-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; font: 600 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-.pw-row { user-select: text; -webkit-user-select: text; -webkit-user-drag: none; cursor: auto; }
+.pw-tip {
+  position: fixed; z-index: 2147483647; max-width: 320px; padding: 8px 10px; border-radius: 8px;
+  background: #1c2230; color: #f2f4f7; font: 500 12px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  white-space: pre-line; pointer-events: none; box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
+}
+.pw-tip[hidden] { display: none; }
+.pw-check { cursor: help; }
+.pw-row [data-tip] { cursor: help; }
+.pw-row { position: relative; z-index: 1; user-select: text; -webkit-user-select: text; -webkit-user-drag: none; cursor: auto; }
 .pw-chip { user-select: text; -webkit-user-select: text; display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px; background: #eef1f4; color: #38434f; white-space: nowrap; cursor: text; }
 .pw-pay { background: #e3f4e8; color: #1d6b3a; font-variant-numeric: tabular-nums; }
 .pw-housing { background: #eef4fb; color: #2f5a8a; font-weight: 600; }

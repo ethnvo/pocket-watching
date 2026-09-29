@@ -133,7 +133,9 @@ button:disabled { opacity: .55; cursor: progress; }
 }
 .add .field { margin: 0; }
 .add .source { grid-column: span 3; }
-.add .submit { grid-column: span 3; justify-self: end; }
+.add .submit { grid-column: -2 / -1; justify-self: end; }
+.add .check-field { grid-column: span 2; display: flex; gap: 8px; align-items: center; font-weight: 500; color: var(--ink-2); align-self: center; }
+.add .check-field input { width: auto; height: auto; margin: 0; }
 .money input { font-variant-numeric: tabular-nums; }
 
 /* ---------- import ---------- */
