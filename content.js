@@ -207,8 +207,8 @@
       chips.push(`<span class="pw-chip pw-unpaid" title="${esc(r.pay_basis || "")}">unpaid</span>`);
     } else if (r.pay_hourly || r.pay_annual) {
       const parts = r.is_internship
-        ? [money(r.pay_hourly, cur, 0) + "/hr", r.pay_monthly ? money(r.pay_monthly, cur, 0) + "/mo" : null]
-        : [money(r.pay_annual, cur, 0, true) + "/yr", r.pay_hourly ? money(r.pay_hourly, cur, 0) + "/hr" : null];
+        ? [hourlyStr(r.pay_hourly, cur) + "/hr", r.pay_monthly ? money(r.pay_monthly, cur, 0) + "/mo" : null]
+        : [money(r.pay_annual, cur, 0, true) + "/yr", r.pay_hourly ? hourlyStr(r.pay_hourly, cur) + "/hr" : null];
       const scope =
         r.pay_scope === "reported" ? ` <span class="pw-dim">✓</span>` :
         r.pay_scope === "company" ? "" : ` <span class="pw-dim">mkt</span>`;
@@ -267,11 +267,16 @@
 
   // ---------- utils ----------
 
+  // $21/hr stays "$21", $57.69/hr keeps its cents.
+  function hourlyStr(n, cur) {
+    return money(n, cur, Number.isInteger(Number(n)) ? 0 : 2);
+  }
+
   function money(n, cur, digits, compact) {
     if (n == null || isNaN(n)) return "—";
     try {
       return new Intl.NumberFormat(undefined, {
-        style: "currency", currency: cur, maximumFractionDigits: digits,
+        style: "currency", currency: cur, maximumFractionDigits: digits, minimumFractionDigits: digits,
         ...(compact ? { notation: "compact" } : {}),
       }).format(n);
     } catch {

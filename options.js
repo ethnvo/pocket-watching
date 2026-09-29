@@ -19,7 +19,7 @@ async function renderKnown() {
   const { knownPay = [] } = await chrome.storage.local.get("knownPay");
   $("known").innerHTML = knownPay
     .map((k, i) => {
-      const amt = k.hourly ? `$${k.hourly}/hr${k.intern ? " (intern)" : ""}` : `$${Number(k.annual).toLocaleString()}/yr`;
+      const amt = k.hourly ? `$${k.hourly}/hr${k.intern ? " (intern)" : ""}` : k.monthly ? `$${Number(k.monthly).toLocaleString()}/mo (intern)` : `$${Number(k.annual).toLocaleString()}/yr`;
       return `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0"><b>${esc(k.company)}</b></td><td>${esc(k.role || "any role")}</td><td>${amt}</td><td style="text-align:right"><a href="#" data-i="${i}">remove</a></td></tr>`;
     })
     .join("");
@@ -40,6 +40,7 @@ $("kpAdd").onclick = async () => {
   const unit = $("kpUnit").value;
   const entry = { company, role: $("kpRole").value.trim() || undefined };
   if (unit === "yr") Object.assign(entry, { annual: amount, intern: false });
+  else if (unit === "mo") Object.assign(entry, { monthly: amount, intern: true });
   else Object.assign(entry, { hourly: amount, intern: unit === "hr" });
   const { knownPay = [] } = await chrome.storage.local.get("knownPay");
   knownPay.push(entry);
