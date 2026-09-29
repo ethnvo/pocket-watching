@@ -75,7 +75,7 @@
   // Tiers only ever show as a compliment.
   const SHOWN_TIERS = new Set(["THANOS", "S", "A"]);
   const TIER_MEANING = {
-    THANOS: "THANOS tier: overwhelmingly powerful. The rarest seats there are.",
+    THANOS: "THANOS tier: the rarest, most selective seats in tech. Top quant firms, frontier AI research, founding engineer at a top-backed startup.",
     S: "S tier: elite and hyper-selective.",
     A: "A tier: excellent. A seat most people would love to have.",
   };
