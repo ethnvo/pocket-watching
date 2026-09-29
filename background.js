@@ -80,7 +80,7 @@ function normalizePay(item) {
   return out;
 }
 
-const JOB_CACHE = "v15:"; // per-entry job results (estimates); bump to re-run every lookup
+const JOB_CACHE = "v16:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -323,7 +323,7 @@ async function lookup(entries, profile) {
 
 A) Parse: role title, company, location, and the REAL employment type. Don't trust the title alone:
   - Use the Education section (and headline, e.g. "Student at X", "CS @ UCI") to work out when they were/are enrolled. A role held while they were a student — current or past — is almost always an internship, co-op or part-time job even if it's titled "Software Engineer" and not tagged "Internship". Treat it as an internship for pay.
-  - LARP: set larp=true when a student (or someone clearly pre-graduation at the time) lists a full-time-sounding title (e.g. "Software Engineer", "Product Manager", "CTO", "Founder & CEO" of something with no real footprint) that is really an internship, part-time gig, club/project, or inflated title. Explain in larp_reason. Don't flag roles already clearly labeled Internship/Intern/Co-op/Part-time. Never flag "incoming"/future roles (e.g. "Incoming SWE Intern", "Incoming Software Engineer @ X", or a start date in the future) — announcing an upcoming offer is fine.
+  - LARP: set larp=true when a student (or someone clearly pre-graduation at the time) lists a full-time-sounding title (e.g. "Software Engineer", "Product Manager", "CTO", "Founder & CEO" of something with no real footprint) that is really an internship, part-time gig, club/project, or inflated title. Explain in larp_reason. Don't flag roles already clearly labeled Internship/Intern/Co-op/Part-time. Never flag club, student-org, project-team or volunteer positions (President, VP, Treasurer of a student association, lead of a university design team…) — those aren't pretending to be jobs. DO flag a "Founder"/"CEO" of a startup with no real users or traction presented as a real company. Never flag "incoming"/future roles (e.g. "Incoming SWE Intern", "Incoming Software Engineer @ X", or a start date in the future) — announcing an upcoming offer is fine.
   - UNPAID: school clubs, student orgs, university project teams, hackathon teams, research-for-credit, volunteering, and personal projects are unpaid — set unpaid=true, pay fields null, category "Student org" (or "Volunteer" for volunteering). Paid university jobs (TA, paid research assistant) are NOT unpaid.
 
 SPEED: Be fast. For well-known companies (big tech, quant firms, major banks, well-known startups) answer from your own knowledge — do NOT search. Only use Google Search for companies or pay you genuinely don't know, and use at most 2 searches total.
@@ -365,6 +365,7 @@ E) CATEGORY — pick exactly one:
   "Big Tech" = large established tech not above: Oracle, IBM, Salesforce, Adobe, Intel, Cisco, AMD, Qualcomm, ServiceNow, Workday.
   "Unicorn" = private startup valued at $1B+ not listed above.
   "Startup" = other startups (set stage when known).
+  Clubs, associations, societies, chapters, design/project teams and anything named "<thing> at <University>" (e.g. "Unmanned Aerial Vehicles at UCI") are "Student org" — never a startup.
   "Bank", "Consulting", "Defense", "Public co" (other public companies), "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed".
   stage: for Startup only (not Unicorn), and ONLY if you found an actual announced funding round ("Seed", "Series A", "Series B", ...). Unfunded/bootstrapped or unknown → null. Never guess "Pre-seed".
 
@@ -416,6 +417,14 @@ ${list}`;
     // headline that names this entry's company.
     const headlineIncoming = /\bincoming\b/i.test(profile.headline || "") && e.hint?.company &&
       norm(profile.headline).includes(norm(e.hint.company).split(" ")[0]);
+    // clubs / student orgs / volunteering aren't claiming to be jobs → never LARP
+    const org = `${e.hint?.company || ""} ${e.group || ""}`;
+    const looksStudentOrg = /\b(club|society|association|chapter|student|fraternity|sorority)\b|\bat (uc ?\w+|ucla|ucsd|ucsb|uci|university|college)\b/i.test(org);
+    if (looksStudentOrg && item.category === "Startup") item.category = "Student org";
+    if (item.larp && (/^(Student org|Volunteer)$/.test(item.category || "") || looksStudentOrg)) {
+      item.larp = false;
+      item.larp_reason = null;
+    }
     if (item.larp && (/\bincoming\b/i.test(e.text) || headlineIncoming)) {
       item.larp = false;
       item.larp_reason = null;
@@ -525,6 +534,7 @@ function applyKnownCompanies(results, entries, list) {
       stage: k.stage ?? null,
       ...(k.tier ? { tier: k.tier } : {}),
       ...(k.larp === false ? { larp: false, larp_reason: null } : {}),
+      ...(k.larp === true ? { larp: true, larp_reason: k.larp_reason || r.larp_reason || null } : {}),
     };
   }
   return results;

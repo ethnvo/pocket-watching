@@ -4,6 +4,8 @@
     "category": "Startup",
     "stage": null,
     "note": "onda is an early, unfunded (not seeded) startup \u2014 no funding round.",
-    "larp": false
+    "larp": true,
+    "larp_reason": "A startup with 0 users.",
+    "v": 2
   }
 ]
