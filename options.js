@@ -461,9 +461,12 @@ async function renderUsage() {
   const u = (await chrome.storage.local.get(k))[k] || { calls: 0, searches: 0, inTok: 0, outTok: 0 };
   const limits = { ...DEFAULT_LIMITS, ...(await chrome.storage.sync.get(Object.keys(DEFAULT_LIMITS))) };
   const cost = u.inTok * 0.3e-6 + u.outTok * 2.5e-6 + Math.max(0, u.searches - 1500) * 0.035;
+  const callCap = limits.dailyCallLimit + (u.extraCalls || 0);
+  const searchCap = limits.dailySearchLimit + (u.extraSearches || 0);
   $("usageStat").textContent =
-    `${u.calls.toLocaleString()} of ${limits.dailyCallLimit.toLocaleString()} lookups, ` +
-    `${u.searches.toLocaleString()} of ${limits.dailySearchLimit.toLocaleString()} web searches. ` +
+    `${u.calls.toLocaleString()} of ${callCap.toLocaleString()} lookups, ` +
+    `${u.searches.toLocaleString()} of ${searchCap.toLocaleString()} web searches` +
+    `${u.extraSearches ? ` (includes +${u.extraSearches.toLocaleString()} allowed today)` : ""}. ` +
     `Estimated cost today: $${cost < 0.01 && cost > 0 ? "<0.01" : cost.toFixed(2)}.`;
   $("dailySearchLimit").value = limits.dailySearchLimit;
   $("dailyCallLimit").value = limits.dailyCallLimit;
@@ -476,6 +479,11 @@ $("saveLimits").onclick = async () => {
   flash($("dataStatus"), a > 1500 ? "Limits saved. Above 1,500 searches a day, each search costs $0.035." : "Limits saved.");
   renderUsage();
 };
+$("allowMore").onclick = () =>
+  chrome.runtime.sendMessage({ type: "pw:allowMore", searches: 500, calls: 1000 }, () => {
+    flash($("dataStatus"), "Allowed 500 more web searches and 1,000 more lookups for today.");
+    renderUsage();
+  });
 setInterval(renderUsage, 10000);
 
 chrome.storage.onChanged?.addListener((ch, area) => {

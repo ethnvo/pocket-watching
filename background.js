@@ -256,6 +256,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "pw:options") return void chrome.runtime.openOptionsPage();
   if (msg?.type === "pw:isImportTab") return void sendResponse(importWaiters.has(_sender.tab?.id));
   if (msg?.type === "pw:imported") return void importWaiters.get(_sender.tab?.id)?.(msg.data);
+  if (msg?.type === "pw:allowMore") {
+    allowMoreToday(msg.searches, msg.calls).then((u) => sendResponse({ ok: true, usage: u }));
+    return true;
+  }
   if (msg?.type === "pw:editEstimate") {
     editEstimate(msg.key, msg.patch)
       .then((data) => sendResponse({ ok: true, data }))
@@ -817,8 +821,18 @@ async function getLimits() {
 // true once the day's budget is used up (refinements stop earlier, at 80% of the search limit)
 async function overBudget({ refinement = false, search = true } = {}) {
   const [u, l] = await Promise.all([getUsage(), getLimits()]);
-  if (u.calls >= l.dailyCallLimit) return true;
-  return search && u.searches >= l.dailySearchLimit * (refinement ? 0.8 : 1);
+  if (u.calls >= l.dailyCallLimit + (u.extraCalls || 0)) return true;
+  return search && u.searches >= (l.dailySearchLimit + (u.extraSearches || 0)) * (refinement ? 0.8 : 1);
+}
+
+// "Allow more today": a one-day bump on top of the regular limits.
+async function allowMoreToday(searches = 500, calls = 1000) {
+  const k = usageKey();
+  const u = await getUsage();
+  u.extraSearches = (u.extraSearches || 0) + searches;
+  u.extraCalls = (u.extraCalls || 0) + calls;
+  await chrome.storage.local.set({ [k]: u });
+  return u;
 }
 async function recordUsage(body, searched) {
   const k = usageKey();

@@ -17,6 +17,9 @@
 .pw-pay .pw-housing { background: #eef4fb; color: #2f5a8a; font-weight: 600; }
 .pw-dim { color: #4f8a64; }
 .pw-wait { color: #7a8591; font-weight: 500; }
+.pw-more { background: #fff4d6; color: #8a5a00; cursor: pointer; font-weight: 700; }
+.pw-more:hover { background: #ffe9a8; }
+html.pw-dark .pw-more { background: #3a3019; color: #f0c870; }
 .pw-err { background: #fde8e8; color: #a23636; cursor: pointer; }
 .pw-spin { width: 10px; height: 10px; border: 2px solid #c9d0d7; border-top-color: #5a6672; border-radius: 50%; animation: pw-spin .8s linear infinite; }
 @keyframes pw-spin { to { transform: rotate(360deg); } }

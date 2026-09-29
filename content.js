@@ -409,7 +409,19 @@
     const tip = limit
       ? "Pocket Watching paused new lookups for today to keep Gemini costs down. Saved results still show. Raise the limit in Settings → Data, or check back tomorrow."
       : err;
-    row.innerHTML = `<span class="pw-chip ${limit ? "pw-wait" : "pw-err"}" data-tip="${esc(tip)}">⌚ ${noKey ? "add Gemini key" : limit ? "daily limit reached" : "lookup failed — retry"}</span>`;
+    row.innerHTML = limit
+      ? `<span class="pw-chip pw-wait" data-tip="${esc(tip)}">⌚ daily limit reached</span><span class="pw-chip pw-more" data-act="more" data-tip="Raise today's limit by 500 web searches and 1,000 lookups, then keep going. Past 1,500 searches a day, each costs about $0.035.">allow 500 more</span>`
+      : `<span class="pw-chip pw-err" data-tip="${esc(tip)}">⌚ ${noKey ? "add Gemini key" : "lookup failed — retry"}</span>`;
+    const more = row.querySelector('[data-act="more"]');
+    if (more)
+      more.onclick = (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        chrome.runtime.sendMessage({ type: "pw:allowMore", searches: 500, calls: 1000 }, () => {
+          lastError = null;
+          scan();
+        });
+      };
     row.firstChild.onclick = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();

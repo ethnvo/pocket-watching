@@ -202,7 +202,7 @@ button:disabled { opacity: .55; cursor: progress; }
 .store-desc { color: var(--ink-3); font-size: 13px; margin: 0 0 12px; }
 .store .stat { margin-top: auto; }
 .usage { margin-top: 16px; }
-.limits { display: grid; grid-template-columns: repeat(2, minmax(0, 200px)) auto; gap: 12px; align-items: end; }
+.limits { display: grid; grid-template-columns: repeat(2, minmax(0, 180px)) auto auto; gap: 12px; align-items: end; }
 .limits .field { margin: 0; }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .dot.confirmed { background: var(--check); }

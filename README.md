@@ -59,7 +59,7 @@ To make an estimate, the text of the entry being looked up (title, company, date
 
 It runs on your own Gemini API key. With Gemini 2.5 Flash, a lookup costs about $0.002 in tokens, and web searches are free up to 1,500 a day (then $35 per 1,000). A typical profile is around 10 lookups, so normal use is effectively free. Revisits, confirmed pay and community pay cost nothing, and school lookups don't use web search.
 
-To be safe, it stops new lookups for the day at **1,000 web searches or 2,000 lookups**. Background pay double-checks stop at 80% of the search limit. Settings → Data shows today's usage and estimated cost, and lets you change the limits. On a free-tier key with no billing, it costs nothing but Google may use requests to improve its products.
+To be safe, it stops new lookups for the day at **1,000 web searches or 2,000 lookups**. Background pay double-checks stop at 80% of the search limit. Settings → Data shows today's usage and estimated cost, and lets you change the limits. When you hit one, click **allow 500 more** on the badge (or in Settings) to keep going for the rest of the day. On a free-tier key with no billing, it costs nothing but Google may use requests to improve its products.
 
 ## Install
 
