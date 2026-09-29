@@ -27,6 +27,13 @@
 .pw-unpaid { background: #f3f0e6; color: #7a6b3a; }
 .pw-unverified { background: transparent; color: #8a6d00; box-shadow: 0 0 0 1px #d8c26a inset; font-weight: 500; }
 
+/* time in undergrad */
+.pw-tenure { font-weight: 600; }
+.pw-ten-early { background: #e3f4e8; color: #1d6b3a; }
+.pw-ten-ontime { background: transparent; color: #7a8591; box-shadow: 0 0 0 1px #d3d9df inset; font-weight: 500; }
+.pw-ten-super { background: #fff4d6; color: #8a5a00; }
+.pw-ten-superduper { background: #ffe1d6; color: #9a3412; font-weight: 800; letter-spacing: .3px; }
+
 /* company categories */
 .pw-cat { font-weight: 700; }
 .pw-ico { font-size: 11px; line-height: 1; }
@@ -51,6 +58,10 @@ html.pw-dark .pw-chip { background: #2a2f36; color: #d5dbe1; }
 html.pw-dark .pw-pay { background: #1c3a27; color: #8fe0aa; }
 html.pw-dark .pw-housing { background: #1c2a3d; color: #a8c4ea; }
 html.pw-dark .pw-total { background: transparent; color: #8fe0aa; box-shadow: 0 0 0 1px #2c5a3a inset; }
+html.pw-dark .pw-ten-early { background: #1c3a27; color: #8fe0aa; }
+html.pw-dark .pw-ten-ontime { background: transparent; color: #aab2bb; box-shadow: 0 0 0 1px #3d434a inset; }
+html.pw-dark .pw-ten-super { background: #3a3019; color: #f0c870; }
+html.pw-dark .pw-ten-superduper { background: #43241a; color: #ffb08a; }
 html.pw-dark .pw-err { background: #4a2323; color: #f4a6a6; }
 html.pw-dark .pw-t-A { background: #252f5c; color: #b6c2ff; }
 html.pw-dark .pw-t-B { background: #183a44; color: #9fd8e8; }

@@ -43,9 +43,10 @@
     }
     entries.forEach((e) => (e.key += ctx.hash));
 
+    const tenure = undergradTenure(entries);
     const missing = [];
     for (const e of entries) {
-      if (results.has(e.key)) render(e, results.get(e.key));
+      if (results.has(e.key)) render(e, results.get(e.key), tenure?.key === e.key ? tenure : null);
       else if (lastError) renderError(e, lastError);
       else if (errors.has(e.key)) renderError(e, errors.get(e.key));
       else {
@@ -182,16 +183,16 @@
     return row;
   }
 
-  function render(e, r) {
+  function render(e, r, tenure) {
     const row = rowFor(e);
-    const sig = r ? "done" : "loading";
+    const sig = r ? `done${tenure ? "|" + tenure.label : ""}` : "loading";
     if (row.dataset.sig === sig) return;
     row.dataset.sig = sig;
     if (!r) {
       row.innerHTML = `<span class="pw-chip pw-wait"><span class="pw-spin"></span>${e.kind === "edu" ? "checking school…" : "checking pockets…"}</span>`;
       return;
     }
-    if (e.kind === "edu") return void (row.innerHTML = eduChips(r));
+    if (e.kind === "edu") return void (row.innerHTML = eduChips(r) + tenureChip(tenure));
     const cur = r.currency || "USD";
     const chips = [];
     const tier = String(r.tier || "").toUpperCase();
@@ -261,6 +262,63 @@
     const chips = [`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`];
     if (r.label) chips.push(`<span class="pw-chip pw-cat pw-c-school"><span class="pw-ico">🎓</span>${esc(r.label)}</span>`);
     return chips.join("");
+  }
+
+  // ---------- time in undergrad (incl. community college) ----------
+  //
+  // Sum the months enrolled across undergrad + community-college entries (overlaps
+  // count once, gaps between schools don't count). A standard 4 years (Sep → Jun) is
+  // 45 months; each extra year adds ~12.
+  //   ≤ 41 mo → early grad · 42–50 → on time · 51–62 → super senior · ≥ 63 → super duper senior
+  const MONTHS = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+  const UNDERGRAD = /^(undergrad|community college)$/;
+
+  function parseRange(text) {
+    const m = text.match(/\b(?:(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s)?(\d{4})\s*[-–]\s*(?:(Present)|(?:(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s)?(\d{4}))/i);
+    if (!m) return null;
+    const start = +m[2] * 12 + (m[1] ? MONTHS[m[1].toLowerCase()] : 8); // year-only start → Sep
+    const now = new Date();
+    const end = m[3] ? now.getFullYear() * 12 + now.getMonth() : +m[5] * 12 + (m[4] ? MONTHS[m[4].toLowerCase()] : 5); // year-only end → Jun
+    return end > start ? { start, end } : null;
+  }
+
+  function undergradTenure(entries) {
+    const spans = [];
+    for (const e of entries) {
+      const r = e.kind === "edu" && results.get(e.key);
+      if (!r || !UNDERGRAD.test(r.level || "")) continue;
+      const range = parseRange(e.text);
+      if (range) spans.push({ ...range, e, cc: r.level === "community college" });
+    }
+    if (!spans.length) return null;
+
+    // union of intervals
+    const sorted = [...spans].sort((a, b) => a.start - b.start);
+    let months = 0, curS = sorted[0].start, curE = sorted[0].end;
+    for (const sp of sorted.slice(1)) {
+      if (sp.start <= curE) curE = Math.max(curE, sp.end);
+      else { months += curE - curS; curS = sp.start; curE = sp.end; }
+    }
+    months += curE - curS;
+
+    // badge goes on the (non-CC) school they finish at
+    const target = [...spans].sort((a, b) => (a.cc - b.cc) || (b.end - a.end))[0];
+    const now = new Date();
+    const ongoing = target.end > now.getFullYear() * 12 + now.getMonth();
+    // academic years: Sep→Jun (45 mo) = 4, so years ≈ (months + 3) / 12, to the half year
+    const yrs = `${Math.round(((months + 3) / 12) * 2) / 2} yrs`;
+    const cc = spans.some((s) => s.cc) ? " incl. community college" : "";
+    const [label, cls] =
+      months <= 41 ? ["Early grad", "early"] :
+      months <= 50 ? ["On time", "ontime"] :
+      months <= 62 ? ["Super senior", "super"] :
+      ["SUPER DUPER SENIOR", "superduper"];
+    const tip = `${Math.round(months)} months of undergrad${cc} (~${yrs}${ongoing ? ", expected" : ""}). ~45 months = a standard 4 years.`;
+    return { key: target.e.key, label: `${label} · ${yrs}${ongoing ? " (exp.)" : ""}`, cls, tip };
+  }
+
+  function tenureChip(t) {
+    return t ? `<span class="pw-chip pw-tenure pw-ten-${t.cls}" title="${esc(t.tip)}">${esc(t.label)}</span>` : "";
   }
 
   const CATEGORIES = {

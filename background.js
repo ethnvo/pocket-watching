@@ -373,10 +373,10 @@ async function callGemini(prompt, apiKey, model) {
 
 async function lookupEdu(entries) {
   const results = {};
-  const cached = await chrome.storage.local.get(entries.map((e) => `school1:${e.key}`));
+  const cached = await chrome.storage.local.get(entries.map((e) => `school2:${e.key}`));
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`school1:${e.key}`];
+    const hit = cached[`school2:${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
@@ -404,7 +404,7 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, same 
   "i": number,
   "school": string,
   "program": string | null,     // major/degree as listed
-  "level": "undergrad" | "grad" | "phd" | "high school" | "bootcamp" | "other",
+  "level": "undergrad" | "community college" | "grad" | "phd" | "high school" | "bootcamp" | "other",
   "tier": "THANOS" | "S" | "A" | "B" | "MID" | "C" | "D" | null,
   "label": string | null,       // very short, e.g. "Top 5 CS", "Top 20 CS", "Ivy", "UC", "Community college", "Bootcamp"
   "tier_reason": string         // one short sentence
@@ -419,7 +419,7 @@ ${list}`;
     const e = misses[item?.i];
     if (!e) continue;
     results[e.key] = item;
-    toStore[`school1:${e.key}`] = { at: Date.now(), data: item };
+    toStore[`school2:${e.key}`] = { at: Date.now(), data: item };
   }
   await chrome.storage.local.set(toStore);
   return results;
