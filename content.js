@@ -162,7 +162,10 @@
       // Grouped roles (one company, several positions): the company lives in the outer item's header.
       const inner = dateEl.closest(ITEM_SEL);
       const outer = inner?.parentElement?.closest(ITEM_SEL);
-      const group = outer ? textOf(outer).split("\n").slice(0, 2).join(" · ") : "";
+      let group = outer ? textOf(outer).split("\n").slice(0, 2).join(" · ") : "";
+      // A role with no company line (title, then dates) is part of a group; if the DOM
+      // didn't give us the group, find its header by reading the page text backwards.
+      if (!group && kind === "exp" && !hasCompanyLine(text)) group = groupHeaderBefore(dateEl);
       out.push({ key: hash(kind + "\n" + group + "\n" + text), kind, text, group, dateEl });
     }
     return out;
@@ -182,6 +185,33 @@
     const outer = dateEl.closest(ITEM_SEL)?.parentElement?.closest(ITEM_SEL);
     const company = d >= 2 ? lines[1] : outer ? textOf(outer).split("\n")[0] : "";
     return EVERYDAY_TITLE.test(title) || EVERYDAY_EMPLOYER.test(company);
+  }
+
+  // Grouped-company header: "<Company>" followed by a total-length line like "2 yrs 1 mo"
+  // (optionally "Full-time · 2 yrs"), with no date range.
+  const GROUP_LENGTH = /^(?:(?:full-time|part-time|internship|contract|self-employed|freelance|seasonal|apprenticeship)\s*·\s*)?(?:\d+\s+yrs?(?:\s+\d+\s+mos?)?|\d+\s+mos?)$/i;
+
+  function hasCompanyLine(text) {
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    return lines.findIndex((l) => DATE_RE.test(l)) >= 2;
+  }
+
+  function groupHeaderBefore(dateEl) {
+    const section = findSection(dateEl)?.el;
+    if (!section) return "";
+    const texts = [];
+    const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (n.parentElement?.closest(".pw-row")) continue;
+      if (dateEl.contains(n)) break;
+      const t = n.textContent.trim();
+      if (t && t !== texts[texts.length - 1]) texts.push(t); // skip LinkedIn's duplicated visually-hidden text
+    }
+    for (let i = texts.length - 1; i > 0; i--) {
+      if (DATE_RE.test(texts[i]) && !GROUP_LENGTH.test(texts[i])) continue;
+      if (GROUP_LENGTH.test(texts[i])) return `${texts[i - 1]} · ${texts[i]}`;
+    }
+    return "";
   }
 
   const sectionCache = new WeakMap();

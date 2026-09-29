@@ -84,24 +84,47 @@ const CATEGORY_BY_NAME = [
   ["Hedge Fund", /^(citadel|two sigma|d ?e shaw|bridgewater|millennium|point72|renaissance technologies)\b/],
 ];
 function applyKnownCategory(item, company) {
-  const c = canonCompany(company || item.company);
+  if (!company) return item; // only trust names that were actually on the page
+  const c = canonCompany(company);
   const hit = CATEGORY_BY_NAME.find(([, re]) => re.test(c));
   return hit ? { ...item, category: hit[0], stage: null } : item;
 }
 
-const ELITE = /^(MANGO|FAANG|FAANG-adjacent|FAANG\+|AI Lab|Quant|Hedge Fund)$/;
+const ELITE = /^(MANGO|FAANG|FAANG-adjacent|FAANG\+|FAANG-lite|AI Lab|Quant|Hedge Fund)$/;
 const ENG_ROLE = /engineer|developer|\bsde\b|\bswe\b|software|quant|research/i;
+const ELITE_INTERN_FLOOR = 40; // $/hr — below this at a top company is almost always a bad source
+
+const looksLowElite = (item) =>
+  item.is_internship && ELITE.test(item.category || "") && ENG_ROLE.test(item.role || "") &&
+  item.pay_hourly && item.pay_hourly < ELITE_INTERN_FLOOR && item.pay_scope !== "reported";
 
 function normalizePay(item) {
-  const out = withPayMath(item, toHourly(item.pay_amount, item.pay_period));
-  if (out.is_internship && ELITE.test(out.category || "") && ENG_ROLE.test(out.role || "") && out.pay_hourly && out.pay_hourly < 35) {
-    out.verified = false;
-    out.verify_note = `$${out.pay_hourly}/hr is far below typical pay for this role here — likely an all-roles average. Add the real number under Known pay.`;
-  }
-  return out;
+  return withPayMath(item, toHourly(item.pay_amount, item.pay_period));
 }
 
-const JOB_CACHE = "v22:"; // per-entry job results (estimates); bump to re-run every lookup
+// Double-check suspiciously low pay at a top company with one focused search.
+async function recheckLowPay(item, hint, apiKey, model) {
+  if (!looksLowElite(item)) return item;
+  const where = hint?.location ? ` in ${hint.location}` : "";
+  const prompt = `Find the hourly pay for a "${hint?.title || item.role}" internship at ${hint?.company || item.company}${where}.
+A previous lookup found $${item.pay_hourly}/hr (${item.pay_basis || "unknown source"}), which looks too low — probably a modeled aggregator average. Engineering interns at companies like this usually make $40–60+/hr.
+Use Levels.fyi or Glassdoor/Blind submissions for this exact role (or the official posting range). Do NOT use ZipRecruiter, Salary.com, Payscale or other modeled averages.
+Respond with ONLY a JSON array with one object: [{"pay_amount": number | null, "pay_period": "hour" | "month" | null, "pay_basis": string}] — pay_basis names the source.`;
+  try {
+    const [r] = await callGemini(prompt, apiKey, model);
+    const hourly = toHourly(r?.pay_amount, r?.pay_period);
+    if (hourly && hourly > item.pay_hourly) {
+      return withPayMath({ ...item, pay_amount: r.pay_amount, pay_period: r.pay_period, pay_basis: `${r.pay_basis} (re-checked)` }, hourly);
+    }
+  } catch {}
+  return {
+    ...item,
+    verified: false,
+    verify_note: `$${item.pay_hourly}/hr looks low for this role here and a re-check found nothing better. If you know the real number, add it under Known pay.`,
+  };
+}
+
+const JOB_CACHE = "v23:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -274,7 +297,7 @@ async function lookup(entries, profile) {
   if (!apiKey) throw new Error("NO_KEY");
 
   const list = misses
-    .map((e, i) => `#${i}\n${e.group ? `[Company group: ${e.group}]\n` : ""}${e.text}`)
+    .map((e, i) => `#${i}\n${e.group ? `[Company group: ${e.group}]\n` : e.hint?.company ? "" : "[Company: not shown — do NOT guess one; leave company null and category null]\n"}${e.text}`)
     .join("\n\n");
 
   // Known facts from the shared cache (by the scraped company / title / location).
@@ -351,7 +374,7 @@ SPEED: Be fast. For well-known companies (big tech, quant firms, major banks, we
 
 B) PAY. Rules, in priority order:
   0. The pay must be for THIS ROLE FAMILY (e.g. software engineering intern), never a company-wide average across all roles/internships (those mix in ops, warehouse, retail, etc. and are far lower). Subsidiaries/teams use the parent's figure for the role (Amazon Music, AWS → Amazon SDE intern pay). If a source says "average pay for <Company> internships" without the role, ignore it.
-  1. Use COMPANY-SPECIFIC pay for that role first: Levels.fyi (including its intern pages), Glassdoor/Indeed company salary pages, H-1B/LCA data, or published intern rates. Big tech intern pay is well documented (e.g. Amazon SDE interns in Seattle earn roughly $50-60/hr) — do NOT substitute a generic market "intern median" when company data exists.
+  1. Use COMPANY-SPECIFIC pay for that role first, in this order of trust: Levels.fyi (incl. intern pages) > Glassdoor / Blind submissions for that exact role > the company's official posting range > H-1B/LCA data > Indeed. NEVER use modeled "average" estimators (ZipRecruiter, Salary.com, Payscale, Comparably, "annual pay ÷ 2080" figures) — they're usually far too low. Engineering interns at top tech companies typically make $40–60+/hr. Big tech intern pay is well documented (e.g. Amazon SDE interns in Seattle earn roughly $50-60/hr) — do NOT substitute a generic market "intern median" when company data exists.
   2. Only if no company data exists, use the market median for that title in that metro, and set pay_scope to "market".
   3. Report the pay figure exactly as your source quotes it — don't convert it yourself. Set pay_amount to that number and pay_period to "hour", "month" or "year" (e.g. an intern salary quoted as $9,000/month → pay_amount 9000, pay_period "month"). Conversions are done downstream.
   3b. Internship HOUSING: if the company gives a housing stipend/relocation for interns, set housing_amount and housing_period ("month" for a monthly stipend, "total" for a lump sum). Big tech usually does (e.g. a monthly housing stipend or a lump sum). If none or unknown, null.
@@ -439,7 +462,10 @@ ${list}`;
   for (const raw of arr) {
     const e = misses[raw?.i];
     if (!e) continue;
-    const item = medianFallback(normalizePay(checkUnicorn(applyKnownCategory(raw, e.hint?.company))), refsByKey[e.key], e.hint?.location || raw.location);
+    const item = await recheckLowPay(
+      medianFallback(normalizePay(checkUnicorn(applyKnownCategory(raw, e.hint?.company))), refsByKey[e.key], e.hint?.location || raw.location),
+      e.hint, apiKey, model
+    );
     // "Incoming …" is announcing an offer, not LARPing — in the entry itself, or in a
     // headline that names this entry's company.
     const headlineIncoming = /\bincoming\b/i.test(profile.headline || "") && e.hint?.company &&
