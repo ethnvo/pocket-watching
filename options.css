@@ -110,6 +110,8 @@ button:disabled { opacity: .55; cursor: progress; }
 .empty { color: var(--ink-3); font-size: 14px; margin: 0 0 16px; }
 
 /* ---------- known pay table ---------- */
+.community { margin: 0 0 20px; padding: 4px 16px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.community .toggle { border-bottom: 0; cursor: pointer; }
 .table { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; margin-bottom: 20px; }
 .table:empty { display: none; }
 .row {

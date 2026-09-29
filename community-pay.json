@@ -1,0 +1,54 @@
+[
+  {
+    "company": "koderAI",
+    "role": "Software Engineer Intern",
+    "hourly": 21,
+    "intern": true,
+    "location": "Irvine, California",
+    "source": "Summer 2025 offer",
+    "contributor": "ethnvo"
+  },
+  {
+    "company": "EQUUS",
+    "role": "Software Engineer Intern",
+    "hourly": 23,
+    "intern": true,
+    "location": "City of Industry, California",
+    "source": "Summer 2026 offer",
+    "contributor": "ethnvo"
+  },
+  {
+    "company": "Amazon",
+    "role": "SDE Intern",
+    "monthly": 10200,
+    "housing": 2200,
+    "housing_period": "month",
+    "intern": true,
+    "location": "Culver City, California",
+    "source": "Fall 2026 offer",
+    "contributor": "ethnvo"
+  },
+  {
+    "company": "Amazon",
+    "role": "SDE Intern",
+    "monthly": 9400,
+    "housing": 2900,
+    "housing_period": "month",
+    "intern": true,
+    "location": "Seattle, Washington",
+    "source": "Fall 2026 offer",
+    "contributor": "ethnvo"
+  },
+  {
+    "company": "Meta",
+    "role": "Software Engineer Intern",
+    "hourly": 55,
+    "housing": 3900,
+    "housing_period": "month",
+    "intern": true,
+    "reference": true,
+    "source": "Friend's summer 2025 offer (unconfirmed)",
+    "location": "Menlo Park, California",
+    "contributor": "ethnvo"
+  }
+]

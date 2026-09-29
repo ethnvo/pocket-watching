@@ -1,0 +1,16 @@
+name: Validate community pay
+on:
+  pull_request:
+    paths: ["community-pay.json", "scripts/validate-community.mjs"]
+  push:
+    branches: [main]
+    paths: ["community-pay.json"]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/validate-community.mjs

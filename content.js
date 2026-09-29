@@ -361,8 +361,9 @@
             : [hourlyStr(r.pay_hourly, cur) + "/hr"];
       // Blue check = confirmed by you (Known pay). Everything found online is an estimate.
       const confirmed = r.pay_scope === "reported";
-      const scope = confirmed ? "" : ` <span class="pw-dim">${{ market: "est. mkt", median: "median", edited: "edited" }[r.pay_scope] || "approx."}</span>`;
-      const check = badges.verified && confirmed ? verifiedCheck(`Confirmed · ${r.pay_source}`) : "";
+      const community = r.pay_scope === "community";
+      const scope = confirmed ? "" : ` <span class="pw-dim">${{ market: "est. mkt", median: "median", edited: "edited", community: "community" }[r.pay_scope] || "approx."}</span>`;
+      const check = !badges.verified ? "" : confirmed ? verifiedCheck(`Confirmed · ${r.pay_source}`) : community ? communityCheck(r.pay_source) : "";
       const what =
         kind === "full-time"
           ? `Total compensation per year (base + stock + bonus)${r.level ? ` at ${r.level}` : ", assuming the new-grad level"}.`
@@ -371,12 +372,13 @@
             : "";
       const how = {
         reported: `Confirmed by you · ${r.pay_source || "Known pay"}`,
+        community: `Community-reported: a real offer submitted to the Pocket Watching repo and reviewed. Not confirmed by you. · ${r.pay_source || ""}`,
         edited: "Estimate you corrected in Settings. Not confirmed.",
         company: "Approximate: pay found online for this company and role. Not confirmed, so it could be off.",
         market: `Estimated market rate: no pay found for this company, so this is typical pay for the title${r.location ? ` in ${r.location}` : ""}.`,
         median: "Estimate: the median of pay known for this role at this company in other US locations.",
       }[r.pay_scope] || "Estimate. Not confirmed.";
-      const source = r.pay_scope === "reported" || r.pay_scope === "edited" ? "" : r.pay_basis ? `Source: ${r.pay_basis}` : "";
+      const source = r.pay_scope === "reported" || r.pay_scope === "edited" || r.pay_scope === "community" ? "" : r.pay_basis ? `Source: ${r.pay_basis}` : "";
       const payTip = [how, what, source].filter(Boolean).join("\n\n");
       chips.push(`<span class="pw-chip pw-pay" data-tip="${esc(payTip)}">${parts.filter(Boolean).join(" ")}${scope}${check}</span>`);
       if (badges.housing && r.is_internship && r.housing_amount) {
@@ -435,8 +437,16 @@
     return `${lead}${line}${r.valuation_source ? `\nSource: ${r.valuation_source}` : ""}`;
   }
 
+  // $1.15B · $12M · $1.5M · $250K
   function fmtValuation(n) {
-    return n >= 1e9 ? `$${(n / 1e9).toFixed(n >= 1e10 ? 0 : 2).replace(/\.?0+$/, "")}B` : `$${Math.round(n / 1e6)}M`;
+    const trim = (x, d) => (d ? x.toFixed(d).replace(/\.?0+$/, "") : String(Math.round(x))); // only trim decimal zeros
+    if (n >= 1e9) return `$${trim(n / 1e9, n >= 1e10 ? 0 : 2)}B`;
+    if (n >= 1e6) return `$${trim(n / 1e6, n >= 1e7 ? 0 : 1)}M`;
+    return `$${Math.round(n / 1e3)}K`;
+  }
+
+  function communityCheck(source) {
+    return `<span class="pw-check pw-check-community" data-tip="${esc(`Community-reported · ${source || "offer"}`)}"><svg viewBox="0 0 16 16" width="13" height="13" aria-label="community-reported"><circle cx="8" cy="8" r="7.1" fill="none" stroke="#1d9bf0" stroke-width="1.6"/><path d="M4.8 8.2l2.1 2.1 4.4-4.6" fill="none" stroke="#1d9bf0" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
   }
 
   function verifiedCheck(tip) {

@@ -24,6 +24,7 @@ Open any LinkedIn profile (or its full Experience / Education page) and badges a
 **Confirmed vs. estimated pay**
 - **Confirmed** is pay you entered yourself (from an offer letter, say). It's exact, permanent and shows a blue check with its source ("Confirmed · Fall 2026 offer"). Pay is location-specific: a Seattle offer only confirms Seattle.
 - **Estimated** is everything else, found by Gemini with Google Search and tagged `approx.` (pay found for that company and role), `est. mkt` (typical pay for the title when nothing company-specific turns up) or `median` (the median of known US locations for that role, used when nothing better turns up). Hover any pay badge to see what kind of estimate it is and where it came from.
+- **Community** pay is real offers people submitted to this repo through pull requests ([`community-pay.json`](community-pay.json)). It shows an outlined check and a `community` tag, and fills in wherever you haven't confirmed anything yourself. Want to add yours? See [CONTRIBUTING.md](CONTRIBUTING.md).
 - Settings lets you browse every estimate, fix wrong ones, promote them to confirmed, or delete them.
 
 **Settings** (click the extension icon)
@@ -52,15 +53,14 @@ Open any LinkedIn profile (or its full Experience / Education page) and badges a
 
 ## Privacy
 
-To make an estimate, the text of the entry being looked up (title, company, dates, location, description) plus the person's headline and Education section is sent to the Google Gemini API using your own API key, under Google's terms. Nothing else leaves your browser. Results are cached locally, so revisiting a profile doesn't send it again.
+To make an estimate, the text of the entry being looked up (title, company, dates, location, description) plus the person's headline and Education section is sent to the Google Gemini API using your own API key, under Google's terms. The extension also downloads `community-pay.json` from GitHub (nothing is sent). Nothing else leaves your browser. See [PRIVACY.md](PRIVACY.md). Results are cached locally, so revisiting a profile doesn't send it again.
 
 ## Install
 
 1. Clone this repo: `git clone https://github.com/ethnvo/pocket-watching.git`
-2. **Clear the author's seed data** (recommended). `seed-pay.json` and `seed-companies.json` ship with the author's own offers and startup, and they load as *confirmed* pay on first install. Replace both files' contents with `[]`, or add your own entries.
-3. Get a free Gemini API key at https://aistudio.google.com/apikey.
-4. In Chrome, go to `chrome://extensions`, turn on **Developer mode** and click **Load unpacked**, then choose this folder.
-5. Paste the key on the settings page that opens, then open any LinkedIn profile.
+2. Get a free Gemini API key at https://aistudio.google.com/apikey.
+3. In Chrome, go to `chrome://extensions`, turn on **Developer mode** and click **Load unpacked**, then choose this folder.
+4. Paste the key on the settings page that opens, then open any LinkedIn profile.
 
 After pulling changes, click the reload icon on the extension in `chrome://extensions` and refresh LinkedIn.
 
@@ -69,11 +69,13 @@ After pulling changes, click the reload icon on the extension in `chrome://exten
 - `content.js` finds Experience and Education entries on LinkedIn pages and draws the badges.
 - `background.js` calls Gemini, applies confirmed pay, location rules and the median fallback, and caches results.
 - `options.html`, `options.css` and `options.js` are the settings page.
-- `seed-pay.json` and `seed-companies.json` are confirmed pay and company overrides loaded on install. Your own entries live in Chrome storage.
+- `community-pay.json` is community pay, fetched from GitHub about once a day. `scripts/validate-community.mjs` checks it on every pull request.
+- `seed-pay.json` and `seed-companies.json` are pay and company overrides loaded on install. Your own entries live in Chrome storage.
+- `scripts/package.sh` builds the Chrome Web Store zip into `dist/`. The listing text, permission justifications and privacy answers are in [`store/LISTING.md`](store/LISTING.md).
 
 ## Contributing
 
-Issues and pull requests are welcome. There's no build step: edit the files, reload the extension in `chrome://extensions` and refresh LinkedIn. LinkedIn changes its markup often, so if badges stop appearing, `findEntries()` in `content.js` is the place to look.
+Issues and pull requests are welcome, especially offers for community pay. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

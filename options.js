@@ -88,6 +88,17 @@ $("testKey").onclick = async () => {
   }
 };
 
+// ---------- community pay ----------
+chrome.storage.sync.get("useCommunity", ({ useCommunity }) => ($("useCommunity").checked = useCommunity !== false));
+$("useCommunity").onchange = async () => {
+  await chrome.storage.sync.set({ useCommunity: $("useCommunity").checked });
+  await chrome.storage.local.remove("community"); // re-fetch on next lookup
+};
+chrome.storage.local.get("community", ({ community }) => {
+  if (community?.rows?.length)
+    $("communityStat").textContent = `${community.rows.length} real offers people submitted to the repo, reviewed before they're added. Your own Known pay always wins.`;
+});
+
 // ---------- known pay ----------
 async function getKnown() {
   const { knownPay = [] } = await chrome.storage.local.get("knownPay");
@@ -239,7 +250,7 @@ function renderImport(name, jobs, known) {
 }
 
 // ---------- estimates: browse, correct, confirm, delete ----------
-const JOB_CACHE = "v24:"; // keep in sync with background.js
+const JOB_CACHE = "v25:"; // keep in sync with background.js
 const CATEGORY_OPTIONS = ["MANGO", "FAANG", "FAANG-adjacent", "FAANG-lite", "AI Lab", "Quant", "Hedge Fund", "Fintech", "Big Tech", "Unicorn", "Startup", "Bank", "Consulting", "Defense", "Public co", "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed"];
 
 function estPay(d) {
@@ -250,7 +261,7 @@ function estPay(d) {
   if (d.pay_period === "month") return `${money(d.pay_amount)}/mo`;
   return `${money(d.pay_hourly, Number.isInteger(d.pay_hourly) ? 0 : 2)}/hr`;
 }
-const SCOPE_LABEL = { company: "approx.", market: "est. mkt", median: "median", edited: "edited", reported: "confirmed" };
+const SCOPE_LABEL = { company: "approx.", market: "est. mkt", median: "median", edited: "edited", reported: "confirmed", community: "community" };
 
 async function renderEstimates() {
   const all = await chrome.storage.local.get(null);

@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Pocket Watching",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Adds pay, company type and a little context under the career moves on a LinkedIn profile. Everyday jobs are left alone.",
   "permissions": [
     "storage"
   ],
   "host_permissions": [
-    "https://generativelanguage.googleapis.com/*"
+    "https://generativelanguage.googleapis.com/*",
+    "https://raw.githubusercontent.com/*"
   ],
   "background": {
     "service_worker": "background.js"

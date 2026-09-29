@@ -124,7 +124,7 @@ Respond with ONLY a JSON array with one object: [{"pay_amount": number | null, "
   };
 }
 
-const JOB_CACHE = "v24:"; // per-entry job results (estimates); bump to re-run every lookup
+const JOB_CACHE = "v25:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -290,7 +290,10 @@ async function lookup(entries, profile) {
     else misses.push(e);
   }
   const { knownPay = [], knownCompanies = [] } = await chrome.storage.local.get(["knownPay", "knownCompanies"]);
-  const finish = (r) => applyKnownCompanies(applyKnownPay(r, entries, knownPay), entries, knownCompanies);
+  const community = await communityPay();
+  // your Known pay first, then community offers for entries yours doesn't cover
+  const finish = (r) =>
+    applyKnownCompanies(applyKnownPay(applyKnownPay(r, entries, knownPay), entries, community, "community"), entries, knownCompanies);
   if (!misses.length) return finish(results);
 
   const { apiKey, model } = await chrome.storage.sync.get(["apiKey", "model"]);
@@ -322,13 +325,13 @@ async function lookup(entries, profile) {
   for (const e of misses) {
     const h = e.hint || {};
     if (!h.company) continue;
-    const { exact, refs } = knownPayFor(knownPay, h.company, h.title, h.location, internOf(h));
+    const { exact, refs } = knownPayFor([...knownPay, ...community], h.company, h.title, h.location, internOf(h));
     const list = refs.map((k) => ({
       location: k.location || "US, location unknown",
       hourly: knownHourly(k),
       period: knownPeriod(k),
       housing: k.housing || null,
-      src: k.reference ? "unconfirmed" : "reported",
+      src: k.reference ? "unconfirmed" : k.community ? "community" : "reported",
     }));
     const prefix = `pay2:${canonCompany(h.company)}|${norm(h.title)}|`;
     for (const [key, v] of Object.entries(allStored)) {
@@ -343,13 +346,13 @@ async function lookup(entries, profile) {
       const fmt = (x) =>
         `${x.location}: ${x.period === "month" ? `$${Math.round((x.hourly * HOURS_PER_YEAR) / 12)}/month` : x.period === "year" ? `$${Math.round(x.hourly * HOURS_PER_YEAR)}/yr` : `$${x.hourly}/hr`}${x.housing ? ` + $${x.housing}/month housing` : ""}`;
       const head = `Pay for "${h.title}" at ${h.company} elsewhere (pay varies by location — look up the figure ${where} specifically): `;
-      const conf = us.filter((x) => x.src === "reported");
-      const est = us.filter((x) => x.src !== "reported");
-      if (conf.length) confirmed.push(head + conf.map(fmt).join("; ") + ".");
+      const conf = us.filter((x) => x.src === "reported" || x.src === "community");
+      const est = us.filter((x) => x.src !== "reported" && x.src !== "community");
+      if (conf.length) confirmed.push(head + conf.map((x) => fmt(x) + (x.src === "community" ? " (community-reported offer)" : "")).join("; ") + ".");
       if (est.length) facts.push(head + est.map((x) => fmt(x) + (x.src === "unconfirmed" ? " (unconfirmed secondhand report)" : " (earlier estimate)")).join("; ") + ".");
     }
     if (exact) {
-      confirmed.push(`${exact.company}${exact.role ? ` (${exact.role})` : ""}${exact.location ? ` in ${exact.location}` : ""}: pay is ${exact.hourly ? `$${exact.hourly}/hr` : exact.monthly ? `$${exact.monthly}/month` : `$${exact.annual}/yr`}.`);
+      confirmed.push(`${exact.company}${exact.role ? ` (${exact.role})` : ""}${exact.location ? ` in ${exact.location}` : ""}: pay is ${exact.hourly ? `$${exact.hourly}/hr` : exact.monthly ? `$${exact.monthly}/month` : `$${exact.annual}/yr`}${exact.community ? " (community-reported offer)" : ""}.`);
     }
     const kc = findKnownCompany(knownCompanies, e.hint?.company);
     if (kc?.note) confirmed.push(`${kc.company}: ${kc.note}`);
@@ -545,6 +548,30 @@ ${list}`;
   return finish(results);
 }
 
+// ---------- Community pay: offers submitted to the repo via pull request ----------
+// Fetched from GitHub about once a day (data only), falling back to the bundled copy.
+const COMMUNITY_URL = "https://raw.githubusercontent.com/ethnvo/pocket-watching/main/community-pay.json";
+const COMMUNITY_TTL_MS = 24 * 60 * 60 * 1000;
+const validCommunityRow = (r) =>
+  r && typeof r.company === "string" && typeof r.role === "string" && typeof r.location === "string" &&
+  [r.hourly, r.monthly, r.annual].filter((x) => typeof x === "number" && x > 0).length === 1;
+
+async function communityPay() {
+  const { useCommunity } = await chrome.storage.sync.get("useCommunity");
+  if (useCommunity === false) return [];
+  const { community } = await chrome.storage.local.get("community");
+  if (community && Date.now() - community.at < COMMUNITY_TTL_MS) return community.rows;
+  let rows = null;
+  try {
+    const res = await fetch(COMMUNITY_URL, { cache: "no-store" });
+    if (res.ok) rows = await res.json();
+  } catch {}
+  if (!Array.isArray(rows)) rows = await fetch(chrome.runtime.getURL("community-pay.json")).then((r) => r.json()).catch(() => []);
+  rows = (Array.isArray(rows) ? rows : []).filter(validCommunityRow).map((r) => ({ ...r, community: true }));
+  await chrome.storage.local.set({ community: { at: Date.now(), rows } });
+  return rows;
+}
+
 // ---------- Known (user-reported) pay: always wins over the model's estimate ----------
 
 const sameCompany = (known, scraped) => {
@@ -625,11 +652,11 @@ function applyKnownCompanies(results, entries, list) {
   return results;
 }
 
-function applyKnownPay(results, entries, list) {
+function applyKnownPay(results, entries, list, scope = "reported") {
   if (!list.length) return results;
   for (const e of entries) {
     const r = results[e.key];
-    if (!r) continue;
+    if (!r || r.pay_scope === "reported") continue; // your own confirmed pay always wins
     const k = knownPayFor(list, e.hint?.company || r.company, e.hint?.title || r.role, e.hint?.location || r.location, internOf(e.hint, r)).exact;
     if (!k) continue;
     const intern = k.intern ?? r.is_internship;
@@ -642,9 +669,9 @@ function applyKnownPay(results, entries, list) {
       pay_period: k.monthly ? "month" : k.hourly ? "hour" : k.annual ? "year" : null,
       ...(k.housing != null ? { housing_amount: k.housing, housing_period: k.housing_period || "month" } : {}),
       currency: k.currency || "USD",
-      pay_scope: "reported",
-      pay_source: k.source || "your Known pay list",
-      pay_basis: `${k.source || "Reported pay"}${k.role ? ` for ${k.role}` : ""} at ${k.company}${k.location ? ` in ${k.location}` : ""} (from your Known pay list).`,
+      pay_scope: scope,
+      pay_source: scope === "community" ? `${k.source || "Offer"} · community-reported` : k.source || "your Known pay list",
+      pay_basis: `${k.source || "Reported pay"}${k.role ? ` for ${k.role}` : ""} at ${k.company}${k.location ? ` in ${k.location}` : ""} (${scope === "community" ? "community-reported offer from the Pocket Watching repo" : "from your Known pay list"}).`,
       verified: true,
     };
     results[e.key] = withPayMath(base, hourly);

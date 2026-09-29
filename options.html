@@ -71,6 +71,13 @@
       <section id="known">
         <h2>Known pay</h2>
         <p class="hint">Exact pay for a company, role and location. It replaces Gemini's estimate there and gets a blue check. For the same role in other locations it's used as a reference, and if nothing better turns up in the US you'll see the median. Leave role or location blank to cover all of them.</p>
+        <div class="community">
+          <label class="toggle" for="useCommunity">
+            <span><span class="t">Use community pay</span><span class="d" id="communityStat">Real offers people submitted to the repo, reviewed before they're added. Your own Known pay always wins.</span></span>
+            <span class="switch"><input type="checkbox" id="useCommunity" checked><span></span></span>
+          </label>
+          <p class="hint" style="margin:8px 0 0">Have an offer to share? <a href="https://github.com/ethnvo/pocket-watching/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Add it to community pay</a>. No names, just company, role, location and pay.</p>
+        </div>
         <div class="table" id="knownTable" role="table" aria-label="Known pay"></div>
         <p id="knownEmpty" class="empty" hidden>Nothing here yet. Add pay below or import a profile.</p>
 
