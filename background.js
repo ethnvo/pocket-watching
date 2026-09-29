@@ -36,6 +36,32 @@ function withPayMath(item, hourly) {
   return out;
 }
 
+// Same company + title elsewhere in the US is known: if nothing was found here, or the
+// figure is >20% below the median of those references (usually an all-roles average or
+// an error), use the median instead.
+function medianFallback(item, refs, location) {
+  if (!refs?.length || item.unpaid || !isUS(location)) return item;
+  const med = median(refs.map((r) => r.hourly));
+  if (item.pay_hourly && item.pay_hourly >= med * 0.8) return item;
+  const period = median(refs.map((r) => ({ hour: 0, month: 1, year: 2 })[r.period] ?? 0)) >= 1 ? "month" : "hour";
+  const amount = period === "month" ? Math.round((med * HOURS_PER_YEAR) / 12) : Math.round(med * 100) / 100;
+  const why = item.pay_hourly
+    ? `The figure found here ($${item.pay_hourly}/hr) was well below this role's pay elsewhere, so this is`
+    : `No pay found for this location, so this is`;
+  return withPayMath(
+    {
+      ...item,
+      pay_amount: amount,
+      pay_period: period,
+      pay_scope: "median",
+      pay_basis: `${why} the median across ${refs.length} known US location${refs.length === 1 ? "" : "s"} (${refs.map((r) => r.location).join("; ")}).`,
+      verified: item.verified !== false || /far below typical/.test(item.verify_note || ""),
+      verify_note: null,
+    },
+    med
+  );
+}
+
 const ELITE = /^(FAANG|FAANG-adjacent|FAANG\+|AI Lab|Quant|Hedge Fund)$/;
 const ENG_ROLE = /engineer|developer|\bsde\b|\bswe\b|software|quant|research/i;
 
@@ -155,11 +181,11 @@ function pump() {
 
 async function lookup(entries, profile) {
   const results = {};
-  const keys = entries.map((e) => `v10:${e.key}`);
+  const keys = entries.map((e) => `v11:${e.key}`);
   const cached = await chrome.storage.local.get(keys);
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`v10:${e.key}`];
+    const hit = cached[`v11:${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
@@ -186,9 +212,32 @@ async function lookup(entries, profile) {
   const facts = Object.values(shared)
     .filter((v) => v && Date.now() - v.at < SHARED_TTL_MS)
     .map((v) => v.fact);
+  // Same company + title in other locations: known pay rows + pay learned from earlier lookups.
+  const allStored = await chrome.storage.local.get(null);
+  const refsByKey = {};
   for (const e of misses) {
-    const k = findKnownPay(knownPay, e.hint?.company, e.hint?.title);
-    if (k) facts.push(`${k.company}${k.role ? ` (${k.role})` : ""}: pay is ${k.hourly ? `$${k.hourly}/hr` : k.monthly ? `$${k.monthly}/month` : `$${k.annual}/yr`} — reported directly, exact.`);
+    const h = e.hint || {};
+    if (!h.company) continue;
+    const { exact, refs } = knownPayFor(knownPay, h.company, h.title, h.location, internOf(h));
+    const list = refs.map((k) => ({ location: k.location, hourly: knownHourly(k), period: knownPeriod(k), src: "reported" }));
+    const prefix = `pay2:${norm(h.company)}|${norm(h.title)}|`;
+    for (const [key, v] of Object.entries(allStored)) {
+      if (!key.startsWith(prefix) || !v?.hourly || !v.location || Date.now() - v.at > SHARED_TTL_MS) continue;
+      if (h.location && sameLocation(v.location, h.location)) continue;
+      if (!list.some((x) => sameLocation(x.location, v.location))) list.push({ location: v.location, hourly: v.hourly, period: v.period || "hour", src: "lookup" });
+    }
+    const us = list.filter((x) => isUS(x.location) && x.hourly);
+    if (!exact && us.length) {
+      refsByKey[e.key] = us;
+      const where = h.location ? `in ${h.location}` : "for this entry's location";
+      facts.push(
+        `Reference pay for "${h.title}" at ${h.company} in OTHER locations — pay varies by location, so look up the figure ${where} specifically: ` +
+        us.map((x) => `${x.location}: ${x.period === "month" ? `$${Math.round((x.hourly * HOURS_PER_YEAR) / 12)}/month` : x.period === "year" ? `$${Math.round(x.hourly * HOURS_PER_YEAR)}/yr` : `$${x.hourly}/hr`}`).join("; ") + "."
+      );
+    }
+    if (exact) {
+      facts.push(`${exact.company}${exact.role ? ` (${exact.role})` : ""}${exact.location ? ` in ${exact.location}` : ""}: pay is ${exact.hourly ? `$${exact.hourly}/hr` : exact.monthly ? `$${exact.monthly}/month` : `$${exact.annual}/yr`} — reported directly, exact.`);
+    }
     const kc = findKnownCompany(knownCompanies, e.hint?.company);
     if (kc?.note) facts.push(`${kc.company}: ${kc.note}`);
   }
@@ -283,10 +332,10 @@ ${list}`;
   const toStore = {};
   for (const raw of arr) {
     const e = misses[raw?.i];
-    const item = e ? normalizePay(raw) : raw;
     if (!e) continue;
+    const item = medianFallback(normalizePay(raw), refsByKey[e.key], e.hint?.location || raw.location);
     results[e.key] = item;
-    toStore[`v10:${e.key}`] = { at: Date.now(), data: item };
+    toStore[`v11:${e.key}`] = { at: Date.now(), data: item };
 
     // Feed the shared cache (keyed on the scraped hint so the next lookup can find it).
     const h = e.hint || {};
@@ -304,6 +353,9 @@ ${list}`;
         : `$${item.pay_annual}/yr base`;
       toStore[payKey(h.company, h.title, h.location, intern)] = {
         at: Date.now(),
+        location: h.location || item.location || null,
+        hourly: item.pay_hourly,
+        period: item.pay_period || "hour",
         fact: `${item.role} at ${item.company}${item.location ? ` in ${item.location}` : ""}: ${pay} (${item.currency || "USD"}) — ${item.pay_basis || "company data"}.`,
       };
     }
@@ -319,15 +371,55 @@ const sameCompany = (known, scraped) => {
   return !!k && !!c && (c === k || c.startsWith(k + " "));
 };
 
-function findKnownPay(list, company, title) {
-  const hits = list.filter((k) => sameCompany(k.company, company));
-  return (
-    hits.find((k) => k.role && norm(title).includes(norm(k.role))) ||
-    hits.find((k) => !k.role) ||
-    hits[0] ||
-    null
-  );
+// ---------- Locations ----------
+const STATES = { al:"alabama", ak:"alaska", az:"arizona", ar:"arkansas", ca:"california", co:"colorado", ct:"connecticut", de:"delaware", fl:"florida", ga:"georgia", hi:"hawaii", id:"idaho", il:"illinois", in:"indiana", ia:"iowa", ks:"kansas", ky:"kentucky", la:"louisiana", me:"maine", md:"maryland", ma:"massachusetts", mi:"michigan", mn:"minnesota", ms:"mississippi", mo:"missouri", mt:"montana", ne:"nebraska", nv:"nevada", nh:"new hampshire", nj:"new jersey", nm:"new mexico", ny:"new york", nc:"north carolina", nd:"north dakota", oh:"ohio", ok:"oklahoma", or:"oregon", pa:"pennsylvania", ri:"rhode island", sc:"south carolina", sd:"south dakota", tn:"tennessee", tx:"texas", ut:"utah", vt:"vermont", va:"virginia", wa:"washington", wv:"west virginia", wi:"wisconsin", wy:"wyoming", dc:"district of columbia" };
+const NON_US = /\b(india|canada|united kingdom|uk|england|scotland|ireland|germany|france|netherlands|spain|italy|poland|israel|singapore|japan|china|hong kong|australia|brazil|mexico|switzerland|sweden|korea|taiwan|vietnam|philippines|dubai|uae|toronto|vancouver|london|bangalore|bengaluru|hyderabad)\b/i;
+
+function locParts(loc) {
+  const parts = String(loc || "").split("·")[0].split(",").map((p) => norm(p));
+  const city = (parts[0] || "").replace(/\b(greater|metropolitan|metro|area|region|bay)\b/g, " ").replace(/\s+/g, " ").trim();
+  const st = parts[1] || "";
+  return { city, state: STATES[st] || st };
 }
+function sameLocation(a, b) {
+  const A = locParts(a), B = locParts(b);
+  if (!A.city || !B.city) return false;
+  return A.city === B.city || A.city.includes(B.city) || B.city.includes(A.city);
+}
+const isUS = (loc) => !NON_US.test(String(loc || ""));
+const median = (xs) => {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+// "Software Development Engineer" ≈ "SDE", "Software Engineer(ing)" ≈ "SWE".
+const normRole = (s) =>
+  norm(s)
+    .replace(/\bsoftware development engineer(ing)?\b/g, "sde")
+    .replace(/\bsoftware engineer(ing)?\b/g, "swe")
+    .replace(/\binternship\b/g, "intern");
+const roleMatch = (role, title) => {
+  const r = normRole(role), t = normRole(title);
+  return !!r && !!t && (t.includes(r) || r.includes(t));
+};
+
+// Known pay is location-specific. Returns the row that applies here (exact) and rows
+// for the same company + role in other locations (references).
+function knownPayFor(list, company, title, location, intern) {
+  // an intern figure never applies to a full-time role (and vice versa)
+  const byCo = list.filter((k) => sameCompany(k.company, company) && (intern == null || (k.intern ?? true) === intern));
+  const roleHits = byCo.filter((k) => k.role && roleMatch(k.role, title));
+  const pool = roleHits.length ? roleHits : byCo.filter((k) => !k.role);
+  const exact =
+    pool.find((k) => !k.location || !location || sameLocation(k.location, location)) || null;
+  const refs = pool.filter((k) => k !== exact && k.location);
+  return { exact, refs };
+}
+// Intern if LinkedIn tags it (or the title says so); else trust the model's call if we have one.
+const internOf = (h, r) =>
+  /intern|co-?op/i.test(`${h?.type || ""} ${h?.title || ""}`) ? true : r ? !!r.is_internship : null;
+const knownHourly = (k) => k.hourly ?? toHourly(k.monthly, "month") ?? toHourly(k.annual, "year");
+const knownPeriod = (k) => (k.monthly ? "month" : k.hourly ? "hour" : "year");
 
 function findKnownCompany(list, company) {
   return list.find((k) => sameCompany(k.company, company)) || null;
@@ -355,10 +447,10 @@ function applyKnownPay(results, entries, list) {
   for (const e of entries) {
     const r = results[e.key];
     if (!r) continue;
-    const k = findKnownPay(list, e.hint?.company || r.company, e.hint?.title || r.role);
+    const k = knownPayFor(list, e.hint?.company || r.company, e.hint?.title || r.role, e.hint?.location || r.location, internOf(e.hint, r)).exact;
     if (!k) continue;
     const intern = k.intern ?? r.is_internship;
-    const hourly = k.hourly ?? toHourly(k.monthly, "month") ?? toHourly(k.annual, "year");
+    const hourly = knownHourly(k);
     const base = {
       ...r,
       unpaid: false,
@@ -368,7 +460,7 @@ function applyKnownPay(results, entries, list) {
       ...(k.housing != null ? { housing_amount: k.housing, housing_period: k.housing_period || "month" } : {}),
       currency: k.currency || "USD",
       pay_scope: "reported",
-      pay_basis: `Reported pay${k.role ? ` for ${k.role}` : ""} at ${k.company} (from your Known pay list).`,
+      pay_basis: `Reported pay${k.role ? ` for ${k.role}` : ""} at ${k.company}${k.location ? ` in ${k.location}` : ""} (from your Known pay list).`,
       verified: true,
     };
     results[e.key] = withPayMath(base, hourly);

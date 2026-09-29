@@ -68,13 +68,14 @@
 
       <section id="known">
         <h2>Known pay</h2>
-        <p class="hint">Exact pay for a company or role. It replaces Gemini's estimate and gets a blue check. Leave the role blank to cover every role at that company.</p>
+        <p class="hint">Exact pay for a company, role and location. It replaces Gemini's estimate there and gets a blue check. For the same role in other locations it's used as a reference, and if nothing better turns up in the US you'll see the median. Leave role or location blank to cover all of them.</p>
         <div class="table" id="knownTable" role="table" aria-label="Known pay"></div>
         <p id="knownEmpty" class="empty" hidden>Nothing here yet. Add pay below or import a profile.</p>
 
         <form id="addForm" class="add">
           <div class="field"><label for="kpCompany">Company</label><input id="kpCompany" required placeholder="Amazon"></div>
           <div class="field"><label for="kpRole">Role</label><input id="kpRole" placeholder="Any role"></div>
+          <div class="field"><label for="kpLocation">Location</label><input id="kpLocation" placeholder="Anywhere"></div>
           <div class="field money"><label for="kpAmount">Pay</label><input id="kpAmount" required inputmode="decimal" placeholder="10,200"></div>
           <div class="field"><label for="kpUnit">Per</label>
             <select id="kpUnit">

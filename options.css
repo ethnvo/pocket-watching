@@ -118,6 +118,7 @@ button:disabled { opacity: .55; cursor: progress; }
 .row:first-child { border-top: 0; }
 .row .co { font-weight: 600; }
 .row .role { color: var(--ink-2); }
+.row .role small { display: block; color: var(--ink-3); font-size: 12.5px; }
 .row .pay { font-variant-numeric: tabular-nums; }
 .row .pay small { display: block; color: var(--ink-3); font-size: 12.5px; }
 .row .pay .kind { color: var(--ink-3); }
@@ -126,10 +127,11 @@ button:disabled { opacity: .55; cursor: progress; }
 
 .add {
   display: grid; gap: 12px; align-items: end;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, .75fr) minmax(140px, 1.1fr) minmax(0, .85fr) auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, .8fr) minmax(140px, 1fr) minmax(0, .8fr);
   padding: 16px; border: 1px dashed var(--line); border-radius: 12px;
 }
 .add .field { margin: 0; }
+.add .submit { grid-column: -2 / -1; }
 .money input { font-variant-numeric: tabular-nums; }
 
 /* ---------- import ---------- */
@@ -140,7 +142,7 @@ button:disabled { opacity: .55; cursor: progress; }
 .import-head strong { font-family: var(--serif); font-size: 16px; }
 .job {
   display: grid; gap: 12px; align-items: end; padding: 14px 16px; border-top: 1px solid var(--line);
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, .8fr) minmax(140px, 1fr) minmax(0, .8fr);
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, .7fr) minmax(140px, .9fr) minmax(0, .7fr);
 }
 .job:first-of-type { border-top: 0; }
 .job .what { align-self: center; }

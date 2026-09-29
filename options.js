@@ -92,7 +92,7 @@ async function setKnown(list) {
   await chrome.storage.local.set({ knownPay: list });
   renderKnown();
 }
-const knownId = (k) => `${norm(k.company)}|${norm(k.role)}`;
+const knownId = (k) => `${norm(k.company)}|${norm(k.role)}|${norm(k.location)}`;
 
 function describePay(k) {
   const main = k.hourly
@@ -112,7 +112,7 @@ async function renderKnown() {
     .map(
       (k, i) => `<div class="row" role="row">
         <span class="co" role="cell">${esc(k.company)}</span>
-        <span class="role" role="cell">${esc(k.role || "Any role")}</span>
+        <span class="role" role="cell">${esc(k.role || "Any role")}<small>${esc(k.location || "Any location")}</small></span>
         <span class="pay" role="cell">${describePay(k)}</span>
         <button class="remove" data-i="${i}" type="button" aria-label="Remove ${esc(k.company)}">Remove</button>
       </div>`
@@ -128,8 +128,8 @@ async function renderKnown() {
   );
 }
 
-function entryFrom(company, role, amount, unit, housing) {
-  const e = { company, ...(role ? { role } : {}) };
+function entryFrom(company, role, amount, unit, housing, location) {
+  const e = { company, ...(role ? { role } : {}), ...(location ? { location } : {}) };
   if (unit === "yr") Object.assign(e, { annual: amount, intern: false });
   else if (unit === "mo") Object.assign(e, { monthly: amount, intern: true });
   else Object.assign(e, { hourly: amount, intern: unit === "hr" });
@@ -152,9 +152,9 @@ $("addForm").onsubmit = async (ev) => {
   const amount = num($("kpAmount").value);
   if (!amount) return $("kpAmount").focus();
   await upsertKnown([
-    entryFrom($("kpCompany").value.trim(), $("kpRole").value.trim(), amount, $("kpUnit").value, num($("kpHousing").value)),
+    entryFrom($("kpCompany").value.trim(), $("kpRole").value.trim(), amount, $("kpUnit").value, num($("kpHousing").value), $("kpLocation").value.trim()),
   ]);
-  ["kpCompany", "kpRole", "kpAmount", "kpHousing"].forEach((id) => ($(id).value = ""));
+  ["kpCompany", "kpRole", "kpLocation", "kpAmount", "kpHousing"].forEach((id) => ($(id).value = ""));
   $("kpCompany").focus();
 };
 
@@ -178,9 +178,11 @@ $("importForm").onsubmit = (ev) => {
 };
 
 // Same matching as the badges: "Amazon Music" counts as "Amazon"; a role-specific row wins.
-function findKnown(list, company, title) {
+function findKnown(list, company, title, location) {
   const c = norm(company);
-  const hits = list.filter((k) => { const kc = norm(k.company); return kc && (c === kc || c.startsWith(kc + " ")); });
+  const city = (l) => norm(String(l || "").split(",")[0]).replace(/\b(greater|metropolitan|metro|area|region|bay)\b/g, " ").trim();
+  const here = (k) => !k.location || !location || city(k.location).includes(city(location)) || city(location).includes(city(k.location));
+  const hits = list.filter((k) => { const kc = norm(k.company); return kc && (c === kc || c.startsWith(kc + " ")) && here(k); });
   return hits.find((k) => k.role && norm(title).includes(norm(k.role))) || hits.find((k) => !k.role) || null;
 }
 
@@ -196,12 +198,13 @@ function renderImport(name, jobs, known) {
     `<div class="import-head"><strong>${esc(name || "Imported profile")}</strong><span class="hint" style="margin:0">${jobs.length} job${jobs.length === 1 ? "" : "s"} · leave pay blank to skip</span></div>` +
     jobs
       .map((j, i) => {
-        const k = findKnown(known, j.company, j.title);
+        const k = findKnown(known, j.company, j.title, j.location);
         const amount = k ? k.hourly ?? k.monthly ?? k.annual : "";
         const unit = unitFor(j, k);
         const opt = (v, t) => `<option value="${v}"${v === unit ? " selected" : ""}>${t}</option>`;
         return `<div class="job" data-i="${i}">
           <div class="what"><b>${esc(j.title)}</b><span>${esc(j.company || "Unknown company")}${j.type ? ` · ${esc(j.type)}` : ""}</span><em>${esc(j.dates || "")}</em></div>
+          <div class="field"><label for="il${i}">Location</label><input id="il${i}" value="${esc(j.location || "")}" placeholder="Anywhere"></div>
           <div class="field money"><label for="ip${i}">Pay</label><input id="ip${i}" inputmode="decimal" value="${esc(amount)}" placeholder="—"></div>
           <div class="field"><label for="iu${i}">Per</label><select id="iu${i}">${opt("hr", "hour · intern")}${opt("mo", "month · intern")}${opt("hrft", "hour · full-time")}${opt("yr", "year · full-time")}</select></div>
           <div class="field money"><label for="ih${i}">Housing / mo</label><input id="ih${i}" inputmode="decimal" value="${esc(k?.housing ?? "")}" placeholder="—"></div>
@@ -216,7 +219,7 @@ function renderImport(name, jobs, known) {
     jobs.forEach((j, i) => {
       const amount = num($(`ip${i}`).value);
       if (!amount || !j.company) return;
-      entries.push(entryFrom(j.company, j.title, amount, $(`iu${i}`).value, num($(`ih${i}`).value)));
+      entries.push(entryFrom(j.company, j.title, amount, $(`iu${i}`).value, num($(`ih${i}`).value), $(`il${i}`).value.trim()));
     });
     if (!entries.length) return flash($("importStatus"), "Fill in pay for at least one job.", "err");
     await upsertKnown(entries);

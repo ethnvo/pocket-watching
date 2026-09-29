@@ -3,13 +3,17 @@
     "company": "koderAI",
     "role": "Software Engineer Intern",
     "hourly": 21,
-    "intern": true
+    "intern": true,
+    "location": "Irvine, California",
+    "v": 2
   },
   {
     "company": "EQUUS",
     "role": "Software Engineer Intern",
     "hourly": 23,
-    "intern": true
+    "intern": true,
+    "location": "City of Industry, California",
+    "v": 2
   },
   {
     "company": "Amazon",
@@ -18,6 +22,7 @@
     "housing": 2200,
     "housing_period": "month",
     "intern": true,
-    "v": 2
+    "v": 3,
+    "location": "Culver City, California"
   }
 ]
