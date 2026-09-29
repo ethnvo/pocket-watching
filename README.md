@@ -2,6 +2,8 @@
 
 ![Pocket Watching demo: badges and tooltips on a LinkedIn Experience page](docs/demo.gif)
 
+<sub>[Watch in higher quality (MP4)](docs/demo.mp4)</sub>
+
 A Chrome extension that adds a little context under the career moves on a LinkedIn profile: what the company is, roughly what the role pays, and a compliment when it's earned.
 
 It's for curiosity about tech careers (internships, new-grad and early-career jobs), mostly your own and your friends'. It isn't a background check.
