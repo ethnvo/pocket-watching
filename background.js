@@ -92,6 +92,85 @@ function medianFallback(item, refs, location) {
   );
 }
 
+// Full-time TC bands (US, $/yr) for well-documented big-tech levels. The model sometimes
+// returns a figure that's a level or two off (e.g. $370K for Meta E3); anything outside
+// the band snaps to its middle.
+const LEVEL_BANDS = [
+  [/^(meta|facebook|instagram|whatsapp)\b/, [
+    [/\be\s?3\b|\bic\s?3\b/i, 185000, 195000],
+    [/\be\s?4\b|\bic\s?4\b/i, 250000, 290000],
+    [/\be\s?5\b|\bic\s?5\b/i, 360000, 440000],
+  ]],
+  [/^(google|alphabet|youtube)\b/, [
+    [/\bl\s?3\b/i, 185000, 205000],
+    [/\bl\s?4\b/i, 255000, 295000],
+    [/\bl\s?5\b/i, 350000, 420000],
+  ]],
+  [/^(amazon|aws|amazon web services)\b/, [
+    [/\bsde\s?(i|1)\b|\bl\s?4\b/i, 160000, 190000],
+    [/\bsde\s?(ii|2)\b|\bl\s?5\b/i, 220000, 280000],
+  ]],
+];
+function applyLevelBand(item, company, location) {
+  if (item.unpaid || item.is_internship || !item.pay_annual || !item.level || !isUS(location || item.location)) return item;
+  if (/^(reported|community|edited)$/.test(item.pay_scope || "")) return item; // real numbers win
+  const levels = LEVEL_BANDS.find(([re]) => re.test(canonCompany(company || item.company)))?.[1];
+  const band = levels?.find(([re]) => re.test(item.level));
+  if (!band) return item;
+  const [, lo, hi] = band;
+  if (item.pay_annual >= lo && item.pay_annual <= hi) return item;
+  const tc = Math.round((lo + hi) / 2 / 1000) * 1000;
+  return withPayMath(
+    {
+      ...item,
+      pay_amount: tc,
+      pay_period: "year",
+      pay_basis: `Typical ${item.level} TC is $${lo / 1000}K–$${hi / 1000}K; the figure found ($${Math.round(item.pay_annual / 1000)}K) was outside that range.`,
+    },
+    tc / HOURS_PER_YEAR
+  );
+}
+
+// Start date of an entry ("Aug 2025 - Jun 2026") as a sortable number, or null.
+const MONTHS = "jan feb mar apr may jun jul aug sep oct nov dec".split(" ");
+function startOf(text) {
+  const m = String(text || "").match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{4})\s*[-–—]/i);
+  return m ? Number(m[2]) * 12 + MONTHS.indexOf(m[1].toLowerCase()) : null;
+}
+
+// Full-time roles at the same company: an earlier role can't pay more than a later one
+// (a promotion doesn't come with a pay cut). Cap the earlier estimate at the later figure.
+function applyPromotionOrder(results, entries) {
+  const byCo = {};
+  for (const e of entries) {
+    const r = results[e.key];
+    const co = canonCompany(e.hint?.company || e.group || r?.company);
+    const start = startOf(e.text);
+    if (!r || !co || start == null || r.unpaid || r.is_internship || !r.pay_annual) continue;
+    (byCo[co] ||= []).push({ key: e.key, start });
+  }
+  for (const list of Object.values(byCo)) {
+    list.sort((a, b) => b.start - a.start); // newest first
+    let cap = null;
+    for (const { key } of list) {
+      const r = results[key];
+      if (cap != null && r.pay_annual > cap && !/^(reported|community|edited)$/.test(r.pay_scope || "")) {
+        results[key] = withPayMath(
+          {
+            ...r,
+            pay_amount: cap,
+            pay_period: "year",
+            pay_basis: `Capped at the later role's TC ($${Math.round(cap / 1000)}K) — an earlier, lower-level role can't pay more; the figure found was $${Math.round(r.pay_annual / 1000)}K.`,
+          },
+          cap / HOURS_PER_YEAR
+        );
+      }
+      cap = cap == null ? results[key].pay_annual : Math.min(cap, results[key].pay_annual);
+    }
+  }
+  return results;
+}
+
 // Titles that only make sense at a real (big) company — wildly inflated on a club.
 const GRANDIOSE = /member of (the )?technical staff|\bmts\b|forward[- ]deployed|founding engineer|research (scientist|engineer)|staff (software )?engineer|principal engineer|distinguished|\bchief\b|\bc[etfo]o\b|head of (ai|ml|engineering|research|product)|vp of (engineering|ai|product)|director of (engineering|ai|ml|research)|quant(itative)? (researcher|trader|developer)|\bai (researcher|engineer)\b/i;
 
@@ -370,8 +449,13 @@ async function lookup(entries, profile, tabId) {
   const { knownPay = [], knownCompanies = [] } = await chrome.storage.local.get(["knownPay", "knownCompanies"]);
   const community = await communityPay();
   // your Known pay first, then community offers for entries yours doesn't cover
-  const finish = (r) =>
-    applyKnownCompanies(applyKnownPay(applyKnownPay(r, entries, knownPay), entries, community, "community"), entries, knownCompanies);
+  const finish = (r) => {
+    for (const e of entries) if (r[e.key]) r[e.key] = applyLevelBand(r[e.key], e.hint?.company, e.hint?.location);
+    return applyPromotionOrder(
+      applyKnownCompanies(applyKnownPay(applyKnownPay(r, entries, knownPay), entries, community, "community"), entries, knownCompanies),
+      entries
+    );
+  };
   if (!misses.length) {
     const { apiKey, model } = await chrome.storage.sync.get(["apiKey", "model"]);
     return apiKey ? startRefining(finish(results), entries, { apiKey, model, tabId, knownPay, community, knownCompanies }) : finish(results);
@@ -462,7 +546,7 @@ B) PAY. Rules, in priority order:
   2. Only if no company data exists, use the market median for that title in that metro, and set pay_scope to "market".
   3. Report the pay figure exactly as your source quotes it — don't convert it yourself. Set pay_amount to that number and pay_period to "hour", "month" or "year" (e.g. an intern salary quoted as $9,000/month → pay_amount 9000, pay_period "month"). Conversions are done downstream.
   3b. Internship HOUSING: if the company gives a housing stipend/relocation for interns, set housing_amount and housing_period ("month" for a monthly stipend, "total" for a lump sum). Big tech usually does (e.g. a monthly housing stipend or a lump sum). If none or unknown, null.
-  4. Full-time: report median TOTAL COMPENSATION per year (TC = base + annualized stock + bonus) as pay_amount with pay_period "year". Assume the NEW-GRAD / entry level unless the title states a higher one (Senior, Staff, Principal, Lead, II/III, …). Put the company's level name in "level" (e.g. Meta E3, Google L3, Amazon SDE I, Microsoft 59, Apple ICT2, Netflix L4). Levels.fyi is the best source. Internships: never annualize.
+  4. Full-time: report median TOTAL COMPENSATION per year (TC = base + annualized stock + bonus) as pay_amount with pay_period "year". Assume the NEW-GRAD / entry level unless the title states a higher one (Senior, Staff, Principal, Lead, II/III, …). Put the company's level name in "level" (e.g. Meta E3, Google L3, Amazon SDE I, Microsoft 59, Apple ICT2, Netflix L4). Levels.fyi is the best source. Sanity anchors (US TC): Meta E3 ≈ $185–195K, E4 ≈ $250–290K; Google L3 ≈ $185–205K, L4 ≈ $255–295K; Amazon SDE I ≈ $160–190K, SDE II ≈ $220–280K. Several roles at the SAME company are usually promotions: the earlier role's TC must be LOWER than the later one's. Internships: never annualize.
   4b. Part-time, contract and on-campus/university jobs: hourly pay (pay_period "hour").
   5. Founder/self-employed/volunteer/unpaid: pay fields null, explain in pay_basis.
 
@@ -552,7 +636,10 @@ ${list}`;
     const e = misses[raw?.i];
     if (!e) continue;
     // Fast path only — the slower deep dive / low-pay re-check run after we answer (refine()).
-    const item = medianFallback(normalizePay(checkUnicorn(applyKnownCategory(raw, e.hint?.company))), refsByKey[e.key], e.hint?.location || raw.location);
+    const item = applyLevelBand(
+      medianFallback(normalizePay(checkUnicorn(applyKnownCategory(raw, e.hint?.company))), refsByKey[e.key], e.hint?.location || raw.location),
+      e.hint?.company, e.hint?.location
+    );
     // "Incoming …" is announcing an offer, not LARPing — in the entry itself, or in a
     // headline that names this entry's company.
     const headlineIncoming = /\bincoming\b/i.test(profile.headline || "") && e.hint?.company &&
