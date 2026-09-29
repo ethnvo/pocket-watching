@@ -1,4 +1,20 @@
 [
-  { "company": "koderAI", "role": "Software Engineer Intern", "hourly": 21, "intern": true },
-  { "company": "EQUUS", "role": "Software Engineer Intern", "hourly": 23, "intern": true }
+  {
+    "company": "koderAI",
+    "role": "Software Engineer Intern",
+    "hourly": 21,
+    "intern": true
+  },
+  {
+    "company": "EQUUS",
+    "role": "Software Engineer Intern",
+    "hourly": 23,
+    "intern": true
+  },
+  {
+    "company": "Amazon",
+    "role": "SDE Intern",
+    "monthly": 10000,
+    "intern": true
+  }
 ]

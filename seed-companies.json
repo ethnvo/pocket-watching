@@ -1,3 +1,9 @@
 [
-  { "company": "onda", "category": "Startup", "stage": null, "note": "onda is an early, unfunded (not seeded) startup — no funding round." }
+  {
+    "company": "onda",
+    "category": "Startup",
+    "stage": null,
+    "note": "onda is an early, unfunded (not seeded) startup \u2014 no funding round.",
+    "larp": false
+  }
 ]

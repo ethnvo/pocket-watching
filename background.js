@@ -36,8 +36,16 @@ function withPayMath(item, hourly) {
   return out;
 }
 
+const ELITE = /^(FAANG|FAANG-adjacent|FAANG\+|AI Lab|Quant|Hedge Fund)$/;
+const ENG_ROLE = /engineer|developer|\bsde\b|\bswe\b|software|quant|research/i;
+
 function normalizePay(item) {
-  return withPayMath(item, toHourly(item.pay_amount, item.pay_period));
+  const out = withPayMath(item, toHourly(item.pay_amount, item.pay_period));
+  if (out.is_internship && ELITE.test(out.category || "") && ENG_ROLE.test(out.role || "") && out.pay_hourly && out.pay_hourly < 35) {
+    out.verified = false;
+    out.verify_note = `$${out.pay_hourly}/hr is far below typical pay for this role here — likely an all-roles average. Add the real number under Known pay.`;
+  }
+  return out;
 }
 
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
@@ -54,10 +62,24 @@ chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 
 // Seed the "Known pay" / "Known companies" lists from the bundled JSON the first time.
 chrome.runtime.onInstalled.addListener(async () => {
-  const have = await chrome.storage.local.get(["knownPay", "knownCompanies"]);
+  const have = await chrome.storage.local.get(["knownPay", "knownCompanies", "seededIds"]);
   const load = (f) => fetch(chrome.runtime.getURL(f)).then((r) => r.json()).catch(() => []);
-  if (!have.knownPay) await chrome.storage.local.set({ knownPay: await load("seed-pay.json") });
-  if (!have.knownCompanies) await chrome.storage.local.set({ knownCompanies: await load("seed-companies.json") });
+  const id = (k) => `${norm(k.company)}|${norm(k.role)}`;
+  const seeded = new Set(have.seededIds || []);
+  // Add seed rows that were never seeded before (a row you deleted stays deleted).
+  const merge = (list = [], seed) => {
+    const out = [...list];
+    for (const row of seed) {
+      if (seeded.has(id(row))) continue;
+      seeded.add(id(row));
+      const i = out.findIndex((k) => id(k) === id(row));
+      if (i >= 0) out[i] = row; else out.push(row);
+    }
+    return out;
+  };
+  const knownPay = merge(have.knownPay, await load("seed-pay.json"));
+  const knownCompanies = merge(have.knownCompanies, await load("seed-companies.json"));
+  await chrome.storage.local.set({ knownPay, knownCompanies, seededIds: [...seeded] });
 });
 
 chrome.runtime.onInstalled.addListener(({ reason }) => {
@@ -96,11 +118,11 @@ function pump() {
 
 async function lookup(entries, profile) {
   const results = {};
-  const keys = entries.map((e) => `v7:${e.key}`);
+  const keys = entries.map((e) => `v8:${e.key}`);
   const cached = await chrome.storage.local.get(keys);
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`v7:${e.key}`];
+    const hit = cached[`v8:${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
@@ -148,6 +170,7 @@ A) Parse: role title, company, location, and the REAL employment type. Don't tru
 SPEED: Be fast. For well-known companies (big tech, quant firms, major banks, well-known startups) answer from your own knowledge — do NOT search. Only use Google Search for companies or pay you genuinely don't know, and use at most 2 searches total.
 
 B) PAY. Rules, in priority order:
+  0. The pay must be for THIS ROLE FAMILY (e.g. software engineering intern), never a company-wide average across all roles/internships (those mix in ops, warehouse, retail, etc. and are far lower). Subsidiaries/teams use the parent's figure for the role (Amazon Music, AWS → Amazon SDE intern pay). If a source says "average pay for <Company> internships" without the role, ignore it.
   1. Use COMPANY-SPECIFIC pay for that role first: Levels.fyi (including its intern pages), Glassdoor/Indeed company salary pages, H-1B/LCA data, or published intern rates. Big tech intern pay is well documented (e.g. Amazon SDE interns in Seattle earn roughly $50-60/hr) — do NOT substitute a generic market "intern median" when company data exists.
   2. Only if no company data exists, use the market median for that title in that metro, and set pay_scope to "market".
   3. Report the pay figure exactly as your source quotes it — don't convert it yourself. Set pay_amount to that number and pay_period to "hour", "month" or "year" (e.g. an intern salary quoted as $9,000/month → pay_amount 9000, pay_period "month"). Conversions are done downstream.
@@ -250,7 +273,7 @@ ${list}`;
     const item = e ? normalizePay(raw) : raw;
     if (!e) continue;
     results[e.key] = item;
-    toStore[`v7:${e.key}`] = { at: Date.now(), data: item };
+    toStore[`v8:${e.key}`] = { at: Date.now(), data: item };
 
     // Feed the shared cache (keyed on the scraped hint so the next lookup can find it).
     const h = e.hint || {};
@@ -308,6 +331,7 @@ function applyKnownCompanies(results, entries, list) {
       ...(k.category ? { category: k.category } : {}),
       stage: k.stage ?? null,
       ...(k.tier ? { tier: k.tier } : {}),
+      ...(k.larp === false ? { larp: false, larp_reason: null } : {}),
     };
   }
   return results;
@@ -326,8 +350,8 @@ function applyKnownPay(results, entries, list) {
       ...r,
       unpaid: false,
       is_internship: intern,
-      pay_amount: k.annual ?? null,
-      pay_period: k.annual ? "year" : null,
+      pay_amount: k.monthly ?? k.hourly ?? k.annual ?? null,
+      pay_period: k.monthly ? "month" : k.hourly ? "hour" : k.annual ? "year" : null,
       ...(k.housing != null ? { housing_amount: k.housing, housing_period: k.housing_period || "month" } : {}),
       currency: k.currency || "USD",
       pay_scope: "reported",
