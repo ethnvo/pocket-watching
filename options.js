@@ -239,7 +239,7 @@ function renderImport(name, jobs, known) {
 }
 
 // ---------- estimates: browse, correct, confirm, delete ----------
-const JOB_CACHE = "v23:"; // keep in sync with background.js
+const JOB_CACHE = "v24:"; // keep in sync with background.js
 const CATEGORY_OPTIONS = ["MANGO", "FAANG", "FAANG-adjacent", "FAANG-lite", "AI Lab", "Quant", "Hedge Fund", "Fintech", "Big Tech", "Unicorn", "Startup", "Bank", "Consulting", "Defense", "Public co", "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed"];
 
 function estPay(d) {

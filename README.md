@@ -4,6 +4,8 @@ A Chrome extension that adds a little context under the career moves on a Linked
 
 It's for curiosity about tech careers (internships, new-grad and early-career jobs), mostly your own and your friends'. It isn't a background check.
 
+> **Heads up:** this was made as a joke, and for pay transparency. Don't use it to spread hate or demean anyone. Everyone's path is different, and a badge on a LinkedIn page says nothing about a person's worth.
+
 ## What it does
 
 Open any LinkedIn profile (or its full Experience / Education page) and badges appear under each entry.

@@ -124,7 +124,7 @@ Respond with ONLY a JSON array with one object: [{"pay_amount": number | null, "
   };
 }
 
-const JOB_CACHE = "v23:"; // per-entry job results (estimates); bump to re-run every lookup
+const JOB_CACHE = "v24:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -383,9 +383,14 @@ B) PAY. Rules, in priority order:
   5. Founder/self-employed/volunteer/unpaid: pay fields null, explain in pay_basis.
 
 C) PRESTIGE TIER — how impressive/selective THIS SPECIFIC ROLE at THIS company is. The role matters as much as the company: rate the seat, not the logo.
-  THANOS = reserved for the truly insane. Mainly core roles at top quant/HFT/prop firms (Jane Street, Citadel/Citadel Securities, Hudson River Trading, Jump, Two Sigma, DE Shaw, Optiver, IMC, SIG, Five Rings, Radix, Tower) — quant trader, researcher, dev, SWE. Beyond quant, only seats that are rarer still: research scientist at a frontier AI lab (OpenAI, Anthropic, Google DeepMind), founding engineer at a top-tier-backed startup (YC / a16z / Sequoia with real traction), and FOUNDER/CO-FOUNDER of a startup that was acquired or is backed by a top-tier VC (a16z, Sequoia, Founders Fund, Benchmark, Accel, Greylock, Kleiner, Index, Lightspeed, General Catalyst…). A quick check is enough — no need to be exhaustive. Use it sparingly otherwise.
-  S = elite & hyper-selective: core engineering/ML at MANGO (Meta, Anthropic, Nvidia, Google, OpenAI) — the tier above FAANG; engineering at other frontier AI labs or the hottest top startups; MBB consulting; elite rotational APM programs (Google APM, Meta RPM); top-bucket IB.
-  A = the FAANG / FAANG+ group — core engineering/ML roles at Apple, Amazon, Netflix, Microsoft, Snowflake, Databricks, Stripe, Palantir, and peers of that caliber.
+  Rate the TEAM / SPECIALTY inside the company too — the same logo can be several tiers apart (Nvidia CUDA / deep-learning SWE is S; Nvidia embedded or semiconductor-validation SWE is A).
+  THANOS = the rarest seats, overwhelmingly selective:
+    - quant trader / researcher / developer / SWE at top quant, HFT and prop firms (Jane Street, Citadel Securities, Hudson River Trading, Jump, Optiver, IMC, SIG, Five Rings, Radix, Tower, Two Sigma, DE Shaw);
+    - research and AI roles at frontier labs — Research Scientist/Engineer, AI/ML research, and Member of Technical Staff (MTS) at Anthropic, OpenAI, Google DeepMind (MTS is a real, very selective title there);
+    - AI research teams inside MANGO (e.g. Meta FAIR / superintelligence lab, Google Gemini research);
+    - founding engineer at a top-tier-backed startup, and founder/co-founder of a startup that was acquired or is backed by a top-tier VC (a16z, Sequoia, Founders Fund, Benchmark, Accel, Greylock, Kleiner, Index, Lightspeed, General Catalyst…). A quick check is enough.
+  S = elite: general software engineering at Anthropic or OpenAI (non-research); AI/ML or core-platform engineering at MANGO (Nvidia CUDA / deep learning, Google Gemini / Search infra, Meta AI); core engineering at the hottest top startups; MBB consulting; elite rotational APM programs (Google APM, Meta RPM); top-bucket IB.
+  A = excellent: product/general SWE at MANGO outside AI; specialized or peripheral engineering at MANGO (embedded, semiconductor/hardware validation, IT); core engineering/ML at FAANG and FAANG+ companies (Apple, Amazon, Netflix, Microsoft, SpaceX, Snowflake, Databricks, Stripe, Palantir and peers).
   B = good but not elite: non-core roles at big tech (PM or program-manager internships), core roles at well-known large companies (Visa, Salesforce, Adobe, big banks' tech), Big 4.
   MID = decent, RECOGNIZABLE companies: established mid-size/large companies people have heard of, regional names, defense primes, well-funded startups with a real brand. Being verified to exist is not enough — small or obscure private companies and early startups are C.
   C = the DEFAULT for any company that isn't well known — small/lesser-known startups and companies, anything you can't verify — unless a role bump below applies. Also a peripheral role anywhere.
@@ -444,7 +449,7 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, in th
   "unpaid": boolean,
   "verified": boolean,
   "verify_note": string | null,
-  "tier_reason": string                // one short sentence
+  "tier_reason": string                // one sentence naming the specific seat and why it's selective, e.g. "Member of Technical Staff at Anthropic — one of the most selective engineering seats in AI." Never generic ("core engineering internship at a FAANG company").
 }]
 
 PROFILE:
@@ -493,6 +498,11 @@ ${list}`;
         item.larp = false;
         item.larp_reason = null;
       }
+    }
+    // A real title at a real top company (MTS at Anthropic, SWE at Nvidia…) is never LARP.
+    if (item.larp && ELITE.test(item.category || "")) {
+      item.larp = false;
+      item.larp_reason = null;
     }
     // Ordinary titles are never LARP, anywhere — it has to be obscene.
     const title = e.hint?.title || item.role || "";

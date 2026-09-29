@@ -34,6 +34,12 @@
   let scanTimer = null;
   // Tiers only ever show as a compliment.
   const SHOWN_TIERS = new Set(["THANOS", "S", "A"]);
+  const TIER_MEANING = {
+    THANOS: "THANOS tier: overwhelmingly powerful. The rarest seats there are.",
+    S: "S tier: elite and hyper-selective.",
+    A: "A tier: excellent. A seat most people would love to have.",
+  };
+  const tierTip = (tier, reason) => [TIER_MEANING[tier], reason].filter(Boolean).join("\n\n");
 
   // Settings → Badges (all on by default).
   const DEFAULT_BADGES = { category: true, pay: true, housing: true, verified: true, unverified: true, larp: true, tenure: true, school: true, tiers: true };
@@ -328,7 +334,7 @@
     const chips = [];
     const tier = String(r.tier || "").toUpperCase();
     if (badges.tiers && SHOWN_TIERS.has(tier)) {
-      chips.push(`<span class="pw-chip pw-tier pw-t-${tier}" data-tip="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`);
+      chips.push(`<span class="pw-chip pw-tier pw-t-${tier}" data-tip="${esc(tierTip(tier, r.tier_reason))}">${TIER_LABELS[tier]}</span>`);
     }
     if (badges.larp && r.larp) {
       const larpTip = `LARP: a wildly inflated title for what it really was, like "Member of Technical Staff" at a school club or "CEO" of an app with no users.\n\nWhy: ${r.larp_reason || "The title is far bigger than the role."}`;
@@ -440,7 +446,7 @@
   function eduChips(r) {
     const tier = String(r.tier || "").toUpperCase();
     if (!TIER_LABELS[tier]) return ""; // high school, certificates, etc.
-    const chips = badges.tiers && SHOWN_TIERS.has(tier) ? [`<span class="pw-chip pw-tier pw-t-${tier}" data-tip="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`] : [];
+    const chips = badges.tiers && SHOWN_TIERS.has(tier) ? [`<span class="pw-chip pw-tier pw-t-${tier}" data-tip="${esc(tierTip(tier, r.tier_reason))}">${TIER_LABELS[tier]}</span>`] : [];
     if (badges.school && r.label) chips.push(`<span class="pw-chip pw-cat pw-c-school"><span class="pw-ico">🎓</span>${esc(r.label)}</span>`);
     return chips.join("");
   }
