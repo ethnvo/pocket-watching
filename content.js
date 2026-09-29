@@ -475,7 +475,7 @@
   const CATEGORY_TIPS = {
     MANGO: "MANGO = Meta, Anthropic, Nvidia, Google, OpenAI. The newer, AI-era answer to FAANG, and a tier above it.",
     FAANG: "FAANG = Facebook (Meta), Apple, Amazon, Netflix, Google. The staple of the bootcamp era and the peak back then, but lowkey fell off. Meta and Google moved up to MANGO.",
-    "FAANG-adjacent": "Right next to FAANG: Microsoft, Uber, DoorDash, LinkedIn, Tesla.",
+    "FAANG-adjacent": "Right next to FAANG: SpaceX, Tesla, Microsoft, Uber, DoorDash, LinkedIn.",
     "FAANG-lite": "Strong, well-paying tech a step below FAANG: Capital One, Airbnb, Stripe, Snowflake, Databricks and similar.",
     Quant: "Quant trading / HFT / market making.",
     "AI Lab": "A frontier AI lab.",

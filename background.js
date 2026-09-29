@@ -74,10 +74,19 @@ function checkUnicorn(item) {
 
 const ORDINARY_TITLE = /\b(president|vice president|vp|treasurer|secretary|officer|chair(person)?|co-?chair|board member|member|coordinator|organizer|tech(nical)? lead|team lead|lead|developer|technical developer|maintainer|webmaster|mentor|tutor|volunteer|ambassador|representative|director of (events|marketing|outreach|finance|operations)|events|marketing|outreach)\b/i;
 
-// MANGO membership is decided by name, not by the model.
-const MANGO = /^(meta|facebook|instagram|whatsapp|anthropic|nvidia|google|alphabet|deepmind|google deepmind|youtube|openai)\b/;
-function applyMango(item, company) {
-  return MANGO.test(canonCompany(company || item.company)) ? { ...item, category: "MANGO", stage: null } : item;
+// Well-known companies get their category by name, not by the model (first match wins).
+const CATEGORY_BY_NAME = [
+  ["MANGO", /^(meta|facebook|instagram|whatsapp|anthropic|nvidia|google|alphabet|deepmind|google deepmind|youtube|openai)\b/],
+  ["FAANG", /^(apple|amazon|aws|amazon web services|netflix)\b/],
+  ["FAANG-adjacent", /^(spacex|space exploration technologies|tesla|microsoft|uber|doordash|linkedin)\b/],
+  ["FAANG-lite", /^(capital one|airbnb|lyft|snap|snapchat|pinterest|coinbase|robinhood|databricks|snowflake|palantir|roblox|figma|discord|scale ai|stripe|instacart|reddit|dropbox|netflix games)\b/],
+  ["Quant", /^(jane street|citadel securities|hudson river trading|hrt|jump trading|optiver|imc trading|imc|susquehanna|sig|five rings|tower research|drw|radix|virtu|akuna)\b/],
+  ["Hedge Fund", /^(citadel|two sigma|d ?e shaw|bridgewater|millennium|point72|renaissance technologies)\b/],
+];
+function applyKnownCategory(item, company) {
+  const c = canonCompany(company || item.company);
+  const hit = CATEGORY_BY_NAME.find(([, re]) => re.test(c));
+  return hit ? { ...item, category: hit[0], stage: null } : item;
 }
 
 const ELITE = /^(MANGO|FAANG|FAANG-adjacent|FAANG\+|AI Lab|Quant|Hedge Fund)$/;
@@ -92,7 +101,7 @@ function normalizePay(item) {
   return out;
 }
 
-const JOB_CACHE = "v21:"; // per-entry job results (estimates); bump to re-run every lookup
+const JOB_CACHE = "v22:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -368,7 +377,7 @@ D) VERIFICATION — verified=true if the company is well known or you confirmed 
 E) CATEGORY — pick exactly one:
   "MANGO" = Meta (incl. Facebook, Instagram, WhatsApp), Anthropic, Nvidia, Google/Alphabet (incl. DeepMind, YouTube), OpenAI — the newer tier above FAANG.
   "FAANG" = Apple, Amazon (incl. AWS, Amazon Music, etc.), Netflix. (Meta and Google are MANGO.)
-  "FAANG-adjacent" = peers right next to FAANG: Microsoft, Uber, DoorDash, LinkedIn, Tesla.
+  "FAANG-adjacent" = peers right next to FAANG: SpaceX, Tesla, Microsoft, Uber, DoorDash, LinkedIn.
   "FAANG-lite" = strong, well-paying companies a step below: Capital One, Airbnb, Lyft, Snap, Pinterest, Coinbase, Robinhood, Databricks, Snowflake, Palantir, Roblox, Figma, Discord, Scale AI, Stripe, Instacart, Reddit, Dropbox, etc.
   "AI Lab" = frontier AI labs other than MANGO: xAI, Mistral, Safe Superintelligence, Thinking Machines, Reflection, etc.
   "Quant" = quant trading / HFT / prop / market makers: Jane Street, Citadel Securities, HRT, Jump, Optiver, IMC, SIG, Five Rings, Tower, DRW.
@@ -376,7 +385,7 @@ E) CATEGORY — pick exactly one:
   "Fintech" = payments/financial tech: Visa, Mastercard, PayPal, Block, Plaid, Ramp, Brex, Chime, Affirm.
   "Big Tech" = large established tech not above: Oracle, IBM, Salesforce, Adobe, Intel, Cisco, AMD, Qualcomm, ServiceNow, Workday.
   "Unicorn" = private startup with a REPORTED valuation of $1B+ (from a funding announcement or reliable press) and not listed above. Only use it if you can state the valuation and its source (valuation, valuation_source, plus round_name / round_amount / round_date); otherwise use "Startup". For funded startups, fill in the round fields too when you find them.
-  "Startup" = other startups (set stage when known). A publicly traded company is NEVER a startup, however young (e.g. Rivian, Lucid, Robinhood, Coinbase are public); neither is a company with thousands of employees.
+  "Startup" = other startups (set stage when known). A publicly traded company is NEVER a startup, however young (e.g. Rivian, Lucid, Robinhood, Coinbase are public); neither is a big, established private company with thousands of employees (SpaceX, Stripe, Databricks, Anduril).
   Clubs, associations, societies, chapters, design/project teams and anything named "<thing> at <University>" (e.g. "Unmanned Aerial Vehicles at UCI") are "Student org" — never a startup.
   "Bank", "Consulting", "Defense", "Public co" (other public companies), "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed".
   stage: for Startup only (not Unicorn), and ONLY if you found an actual announced funding round ("Seed", "Series A", "Series B", ...). Unfunded/bootstrapped or unknown → null. Never guess "Pre-seed".
@@ -430,7 +439,7 @@ ${list}`;
   for (const raw of arr) {
     const e = misses[raw?.i];
     if (!e) continue;
-    const item = medianFallback(normalizePay(checkUnicorn(applyMango(raw, e.hint?.company))), refsByKey[e.key], e.hint?.location || raw.location);
+    const item = medianFallback(normalizePay(checkUnicorn(applyKnownCategory(raw, e.hint?.company))), refsByKey[e.key], e.hint?.location || raw.location);
     // "Incoming …" is announcing an offer, not LARPing — in the entry itself, or in a
     // headline that names this entry's company.
     const headlineIncoming = /\bincoming\b/i.test(profile.headline || "") && e.hint?.company &&
