@@ -27,7 +27,13 @@
   });
   addEventListener("scroll", () => (tipEl.hidden = true), true);
 
-  const results = new Map();   // entry key -> result
+  const results = new Map();
+  // improved results from background refinement (deep dive / low-pay re-check)
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg?.type !== "pw:refined") return;
+    results.set(msg.key, msg.data);
+    scheduleScan();
+  });   // entry key -> result
   const pending = new Set();   // keys currently being looked up
   let lastError = null;         // global errors only (e.g. no API key)
   const errors = new Map();    // entry key -> error message
@@ -316,7 +322,7 @@
 
   function render(e, r, tenure) {
     const row = rowFor(e);
-    const sig = r ? `done|${badgesKey}${tenure ? "|" + tenure.label : ""}` : "loading";
+    const sig = r ? `done|${badgesKey}|${r.pay_scope}|${r.pay_hourly}|${r.pay_annual}|${r.refining ? 1 : 0}${tenure ? "|" + tenure.label : ""}` : "loading";
     if (row.dataset.sig === sig) return;
     if (!r && row.dataset.sig?.startsWith("done")) return; // once loaded, stay loaded
     row.dataset.sig = sig;
@@ -380,11 +386,14 @@
       }[r.pay_scope] || "Estimate. Not confirmed.";
       const source = r.pay_scope === "reported" || r.pay_scope === "edited" || r.pay_scope === "community" ? "" : r.pay_basis ? `Source: ${r.pay_basis}` : "";
       const payTip = [how, what, source].filter(Boolean).join("\n\n");
-      chips.push(`<span class="pw-chip pw-pay" data-tip="${esc(payTip)}">${parts.filter(Boolean).join(" ")}${scope}${check}</span>`);
+      const refining = r.refining ? ` <span class="pw-dim" data-tip="Double-checking this number…">checking…</span>` : "";
+      chips.push(`<span class="pw-chip pw-pay" data-tip="${esc(payTip)}">${parts.filter(Boolean).join(" ")}${scope}${check}${refining}</span>`);
       if (badges.housing && r.is_internship && r.housing_amount) {
         const h = r.housing_period === "month" ? `${money(r.housing_amount, cur, 0)}/mo` : money(r.housing_amount, cur, 0);
         chips.push(`<span class="pw-chip pw-housing" data-tip="Housing stipend${r.housing_period === "month" ? " (monthly)" : " (lump sum)"}">🏠 ${h} housing</span>`);
       }
+    } else if (r.refining) {
+      chips.push(`<span class="pw-chip pw-wait" data-tip="Digging deeper for this role's pay…"><span class="pw-spin"></span>checking pay…</span>`);
     } else if (r.pay_basis) {
       chips.push(`<span class="pw-chip pw-dim" data-tip="${esc(r.pay_basis)}">pay n/a</span>`);
     }

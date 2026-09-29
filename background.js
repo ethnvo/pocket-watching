@@ -136,8 +136,7 @@ function normalizePay(item) {
 // No pay at all for a real, paid job → one focused deep dive. If there's no exact data,
 // the model must still give its best estimate (shown as "est. mkt").
 async function deepDivePay(item, hint, apiKey, model) {
-  if (item.unpaid || item.skip || item.pay_hourly || item.pay_annual || !(hint?.company || item.company)) return item;
-  if (/^(Student org|Volunteer|Self-employed)$/.test(item.category || "")) return item;
+  if (!needsDeepDive(item, hint)) return item;
   const ft = (item.employment || (item.is_internship ? "internship" : "full-time")) === "full-time";
   const where = hint?.location ? ` in ${hint.location}` : "";
   const prompt = `Find the pay for "${hint?.title || item.role}" at ${hint?.company || item.company}${where}.
@@ -210,6 +209,15 @@ const payKey = (company, title, location, intern) =>
 
 chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 
+// Drop results from older cache versions so storage (read on every lookup) stays small.
+chrome.runtime.onInstalled.addListener(async () => {
+  const all = await chrome.storage.local.get(null);
+  const stale = Object.keys(all).filter(
+    (k) => (/^v\d+:/.test(k) && !k.startsWith(JOB_CACHE)) || /^(entry|cache|school1|co|co2|pay):/.test(k)
+  );
+  if (stale.length) await chrome.storage.local.remove(stale);
+});
+
 // Seed the "Known pay" / "Known companies" lists from the bundled JSON the first time.
 chrome.runtime.onInstalled.addListener(async () => {
   const have = await chrome.storage.local.get(["knownPay", "knownCompanies", "seededIds"]);
@@ -259,7 +267,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg?.type !== "pw:lookup") return;
-  const job = msg.kind === "edu" ? () => lookupEdu(msg.entries) : () => lookup(msg.entries, msg.profile || {});
+  const job = msg.kind === "edu" ? () => lookupEdu(msg.entries) : () => lookup(msg.entries, msg.profile || {}, _sender.tab?.id);
   limited(job)
     .then((results) => sendResponse({ ok: true, results }))
     .catch((err) => sendResponse({ ok: false, error: String(err?.message || err) }));
@@ -343,7 +351,7 @@ function pump() {
   }
 }
 
-async function lookup(entries, profile) {
+async function lookup(entries, profile, tabId) {
   const results = {};
   const keys = entries.map((e) => `${JOB_CACHE}${e.key}`);
   const cached = await chrome.storage.local.get(keys);
@@ -358,7 +366,10 @@ async function lookup(entries, profile) {
   // your Known pay first, then community offers for entries yours doesn't cover
   const finish = (r) =>
     applyKnownCompanies(applyKnownPay(applyKnownPay(r, entries, knownPay), entries, community, "community"), entries, knownCompanies);
-  if (!misses.length) return finish(results);
+  if (!misses.length) {
+    const { apiKey, model } = await chrome.storage.sync.get(["apiKey", "model"]);
+    return apiKey ? startRefining(finish(results), entries, { apiKey, model, tabId, knownPay, community, knownCompanies }) : finish(results);
+  }
 
   const { apiKey, model } = await chrome.storage.sync.get(["apiKey", "model"]);
   if (!apiKey) throw new Error("NO_KEY");
@@ -534,13 +545,8 @@ ${list}`;
   for (const raw of arr) {
     const e = misses[raw?.i];
     if (!e) continue;
-    const item = await recheckLowPay(
-      await deepDivePay(
-        medianFallback(normalizePay(checkUnicorn(applyKnownCategory(raw, e.hint?.company))), refsByKey[e.key], e.hint?.location || raw.location),
-        e.hint, apiKey, model
-      ),
-      e.hint, apiKey, model
-    );
+    // Fast path only — the slower deep dive / low-pay re-check run after we answer (refine()).
+    const item = medianFallback(normalizePay(checkUnicorn(applyKnownCategory(raw, e.hint?.company))), refsByKey[e.key], e.hint?.location || raw.location);
     // "Incoming …" is announcing an offer, not LARPing — in the entry itself, or in a
     // headline that names this entry's company.
     const headlineIncoming = /\bincoming\b/i.test(profile.headline || "") && e.hint?.company &&
@@ -612,7 +618,53 @@ ${list}`;
     }
   }
   await chrome.storage.local.set(toStore);
-  return finish(results);
+  return startRefining(finish(results), misses, { apiKey, model, tabId, knownPay, community, knownCompanies });
+}
+
+// Background refinement for jobs with missing or suspiciously low pay. The tab gets the
+// improved result when it's ready; the first answer shows right away. Each job is refined
+// at most once (r.refined), including ones loaded from the cache.
+function startRefining(done, entries, ctx) {
+  for (const e of entries) {
+    const r = done[e.key];
+    if (!r || r.refined || r.pay_scope === "reported" || r.pay_scope === "community") continue;
+    if (!needsDeepDive(r, e.hint) && !looksLowElite(r)) continue;
+    done[e.key] = { ...r, refining: true };
+    refineQueue(() => refine(e, r, ctx));
+  }
+  return done;
+}
+
+const needsDeepDive = (item, hint) =>
+  !item.unpaid && !item.skip && !item.pay_hourly && !item.pay_annual && !!(hint?.company || item.company) &&
+  !/^(Student org|Volunteer|Self-employed)$/.test(item.category || "");
+
+async function refine(e, item, { apiKey, model, tabId, knownPay, community, knownCompanies }) {
+  let r = await recheckLowPay(await deepDivePay(item, e.hint, apiKey, model), e.hint, apiKey, model);
+  r = applyKnownCompanies(applyKnownPay(applyKnownPay({ [e.key]: r }, [e], knownPay), [e], community, "community"), [e], knownCompanies)[e.key];
+  r = { ...r, refining: false, refined: true };
+  const key = `${JOB_CACHE}${e.key}`;
+  const cur = (await chrome.storage.local.get(key))[key];
+  if (cur) await chrome.storage.local.set({ [key]: { ...cur, data: r } });
+  if (tabId != null) chrome.tabs.sendMessage(tabId, { type: "pw:refined", key: e.key, data: r }).catch(() => {});
+}
+
+// Follow-up searches get their own small queue so they never hold up first answers.
+const refineWaiting = [];
+let refineActive = 0;
+function refineQueue(fn) {
+  refineWaiting.push(fn);
+  pumpRefine();
+}
+function pumpRefine() {
+  while (refineActive < 2 && refineWaiting.length) {
+    const fn = refineWaiting.shift();
+    refineActive++;
+    fn().catch(() => {}).finally(() => {
+      refineActive--;
+      pumpRefine();
+    });
+  }
 }
 
 // ---------- Community pay: offers submitted to the repo via pull request ----------
