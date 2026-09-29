@@ -1,8 +1,10 @@
 const $ = (id) => document.getElementById(id);
-chrome.storage.sync.get(["apiKey", "model"], ({ apiKey, model }) => {
+chrome.storage.sync.get(["apiKey", "model", "showTiers"], ({ apiKey, model, showTiers }) => {
   $("apiKey").value = apiKey || "";
   $("model").value = model || "";
+  $("showTiers").checked = !!showTiers;
 });
+$("showTiers").onchange = () => chrome.storage.sync.set({ showTiers: $("showTiers").checked });
 const flash = (t) => { $("status").textContent = t; setTimeout(() => ($("status").textContent = ""), 1500); };
 $("save").onclick = async () => {
   await chrome.storage.sync.set({ apiKey: $("apiKey").value.trim(), model: $("model").value.trim() });

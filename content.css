@@ -2,10 +2,10 @@
 .pw-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px; background: #eef1f4; color: #38434f; white-space: nowrap; cursor: default; }
 .pw-pay { background: #e3f4e8; color: #1d6b3a; font-variant-numeric: tabular-nums; }
 .pw-housing { background: #eef4fb; color: #2f5a8a; font-weight: 600; }
-.pw-total { background: transparent; color: #1d6b3a; box-shadow: 0 0 0 1px #b7dfc4 inset; font-variant-numeric: tabular-nums; }
+.pw-check { display: inline-flex; margin-left: 2px; }
+.pw-check svg { display: block; }
 .pw-dim { color: #7a8591; font-weight: 500; }
 .pw-pay .pw-housing { background: #eef4fb; color: #2f5a8a; font-weight: 600; }
-.pw-total { background: transparent; color: #1d6b3a; box-shadow: 0 0 0 1px #b7dfc4 inset; font-variant-numeric: tabular-nums; }
 .pw-dim { color: #4f8a64; }
 .pw-wait { color: #7a8591; font-weight: 500; }
 .pw-err { background: #fde8e8; color: #a23636; cursor: pointer; }
@@ -57,7 +57,6 @@
 html.pw-dark .pw-chip { background: #2a2f36; color: #d5dbe1; }
 html.pw-dark .pw-pay { background: #1c3a27; color: #8fe0aa; }
 html.pw-dark .pw-housing { background: #1c2a3d; color: #a8c4ea; }
-html.pw-dark .pw-total { background: transparent; color: #8fe0aa; box-shadow: 0 0 0 1px #2c5a3a inset; }
 html.pw-dark .pw-ten-early { background: #1c3a27; color: #8fe0aa; }
 html.pw-dark .pw-ten-ontime { background: transparent; color: #aab2bb; box-shadow: 0 0 0 1px #3d434a inset; }
 html.pw-dark .pw-ten-super { background: #3a3019; color: #f0c870; }

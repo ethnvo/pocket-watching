@@ -12,6 +12,11 @@
   let lastError = null;         // global errors only (e.g. no API key)
   const errors = new Map();    // entry key -> error message
   let scanTimer = null;
+  let showTiers = false;       // Settings → "Show prestige tiers" (off by default)
+  chrome.storage.sync.get("showTiers", (v) => { showTiers = !!v.showTiers; scheduleScan(); });
+  chrome.storage.onChanged.addListener((ch, area) => {
+    if (area === "sync" && "showTiers" in ch) { showTiers = !!ch.showTiers.newValue; scheduleScan(); }
+  });
   let lastSlug = null;
   let firstSeenAt = 0;         // when experience entries first appeared on this page
   let storedEdu = { slug: null, text: "" };
@@ -185,7 +190,7 @@
 
   function render(e, r, tenure) {
     const row = rowFor(e);
-    const sig = r ? `done${tenure ? "|" + tenure.label : ""}` : "loading";
+    const sig = r ? `done|${showTiers}${tenure ? "|" + tenure.label : ""}` : "loading";
     if (row.dataset.sig === sig) return;
     row.dataset.sig = sig;
     if (!r) {
@@ -196,7 +201,7 @@
     const cur = r.currency || "USD";
     const chips = [];
     const tier = String(r.tier || "").toUpperCase();
-    if (TIER_LABELS[tier]) {
+    if (showTiers && TIER_LABELS[tier]) {
       chips.push(`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`);
     }
     if (r.larp) {
@@ -215,23 +220,15 @@
           ? [money(r.pay_amount, cur, 0) + "/mo", `<span class="pw-dim">≈${hourlyStr(r.pay_hourly, cur)}/hr</span>`]
           : [hourlyStr(r.pay_hourly, cur) + "/hr"]
         : [money(r.pay_annual, cur, 0, true) + "/yr", r.pay_hourly ? hourlyStr(r.pay_hourly, cur) + "/hr" : null];
-      const scope =
-        r.pay_scope === "reported" ? ` <span class="pw-dim">✓</span>` :
-        r.pay_scope === "company" ? "" : ` <span class="pw-dim">mkt</span>`;
+      const scope = r.pay_scope === "market" ? ` <span class="pw-dim">mkt</span>` : "";
+      const check = r.verified ? verifiedCheck(r.pay_scope === "reported" ? "Verified — pay you entered in Known pay" : "Verified — company and pay confirmed") : "";
       const payTip = r.pay_period === "month"
         ? `${r.pay_basis || ""}\nMonthly salary. The hourly figure is just an equivalent for comparing (salary × 12 ÷ 2080 hrs).`
         : r.pay_basis || "";
-      chips.push(`<span class="pw-chip pw-pay" title="${esc(payTip)}">${parts.filter(Boolean).join(" · ")}${scope}</span>`);
+      chips.push(`<span class="pw-chip pw-pay" title="${esc(payTip)}">${parts.filter(Boolean).join(" · ")}${scope}${check}</span>`);
       if (r.is_internship && r.housing_amount) {
         const h = r.housing_period === "month" ? `${money(r.housing_amount, cur, 0)}/mo` : money(r.housing_amount, cur, 0);
         chips.push(`<span class="pw-chip pw-housing" title="Housing stipend${r.housing_period === "month" ? " (monthly)" : " (lump sum)"}">🏠 +${h} housing</span>`);
-      }
-      if (r.is_internship && r.total_with_housing) {
-        const tip = (r.pay_period === "month"
-          ? `12-week internship ≈ 2.8 months of salary: ${money(r.pay_total, cur, 0)}`
-          : `12-week internship (480 hrs): ${money(r.pay_total, cur, 0)}`) +
-          (r.housing_total ? ` + ${money(r.housing_total, cur, 0)} housing` : "") + " (pre-tax).";
-        chips.push(`<span class="pw-chip pw-total" title="${esc(tip)}">≈${money(r.total_with_housing, cur, 1, true)} / 12 wks</span>`);
       }
     } else if (r.pay_basis) {
       chips.push(`<span class="pw-chip pw-dim" title="${esc(r.pay_basis)}">pay n/a</span>`);
@@ -256,10 +253,14 @@
     };
   }
 
+  function verifiedCheck(tip) {
+    return `<span class="pw-check" title="${esc(tip)}"><svg viewBox="0 0 16 16" width="13" height="13" aria-label="verified"><circle cx="8" cy="8" r="8" fill="#1d9bf0"/><path d="M4.5 8.2l2.3 2.3 4.7-4.9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
+  }
+
   function eduChips(r) {
     const tier = String(r.tier || "").toUpperCase();
     if (!TIER_LABELS[tier]) return ""; // high school, certificates, etc.
-    const chips = [`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`];
+    const chips = showTiers ? [`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`] : [];
     if (r.label) chips.push(`<span class="pw-chip pw-cat pw-c-school"><span class="pw-ico">🎓</span>${esc(r.label)}</span>`);
     return chips.join("");
   }
