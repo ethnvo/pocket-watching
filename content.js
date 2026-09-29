@@ -2,6 +2,40 @@
 // Experience section and adds inline badges: prestige tier + pay.
 
 (() => {
+  // After the extension is reloaded or updated, this copy of the script is orphaned in
+  // any open LinkedIn tab: every chrome.* call throws "Extension context invalidated".
+  // Detect that and shut down quietly instead of erroring on every page change.
+  let dead = false;
+  let observer = null;
+  const alive = () => {
+    try {
+      return !dead && !!chrome.runtime?.id;
+    } catch {
+      return false;
+    }
+  };
+  function shutdown() {
+    dead = true;
+    try {
+      observer?.disconnect();
+      clearTimeout(scanTimer);
+      tipEl.hidden = true;
+    } catch {} // may run before those exist
+  }
+  const isInvalidated = (err) => /context invalidated/i.test(String(err?.message || err));
+  // chrome.runtime.sendMessage that never throws
+  function send(msg, cb) {
+    if (!alive()) return shutdown();
+    try {
+      chrome.runtime.sendMessage(msg, (resp) => {
+        if (!alive()) return shutdown();
+        cb?.(resp);
+      });
+    } catch (err) {
+      if (isInvalidated(err)) shutdown();
+    }
+  }
+
   const DATE_RE = /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?\s?\d{4}\s*[-–]\s*(?:Present|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?\s?\d{4})/;
   const SECTION_HEADINGS = /^(Experience|Education|Volunteering|Volunteer experience|Licenses & certifications|Projects|Honors & awards|Courses|Publications|Organizations|Test scores)$/;
   const TIER_LABELS = { THANOS: "THANOS tier", S: "S tier", A: "A tier", B: "B tier", MID: "Mid tier", C: "C tier", D: "D tier" };
@@ -64,7 +98,7 @@
   // Import tabs (opened by Settings → Import) just scrape the jobs and report back.
   let importMode = null;
   let modeKnown = false; // don't start lookups until we know this isn't an import tab
-  chrome.runtime.sendMessage({ type: "pw:isImportTab" }, (yes) => {
+  send({ type: "pw:isImportTab" }, (yes) => {
     importMode = !!yes && !chrome.runtime.lastError ? { lastCount: -1, stableSince: 0 } : null;
     modeKnown = true;
     scheduleScan();
@@ -73,12 +107,14 @@
   let firstSeenAt = 0;         // when experience entries first appeared on this page
   let storedEdu = { slug: null, text: "" };
 
-  new MutationObserver(scheduleScan).observe(document.documentElement, { childList: true, subtree: true });
+  observer = new MutationObserver(scheduleScan);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
   scheduleScan();
 
   function scheduleScan() {
+    if (!alive()) return shutdown();
     clearTimeout(scanTimer);
-    scanTimer = setTimeout(scan, 600);
+    scanTimer = setTimeout(() => scan().catch((err) => (isInvalidated(err) ? shutdown() : console.warn("[Pocket Watching]", err))), 600);
   }
 
   async function scan() {
@@ -133,7 +169,7 @@
       }),
     };
     importMode = null;
-    chrome.runtime.sendMessage({ type: "pw:imported", data });
+    send({ type: "pw:imported", data });
   }
 
   // One request per entry so each badge fills in as soon as its own search finishes.
@@ -141,7 +177,7 @@
     pending.add(e.key);
     const profile = { name: ctx.name, headline: ctx.headline, education: ctx.education };
     const entry = { key: e.key, text: e.text, group: e.group, hint: parseHint(e) };
-    chrome.runtime.sendMessage({ type: "pw:lookup", kind: e.kind, entries: [entry], profile }, (resp) => {
+    send({ type: "pw:lookup", kind: e.kind, entries: [entry], profile }, (resp) => {
       pending.delete(e.key);
       const err = chrome.runtime.lastError?.message || (!resp?.ok && (resp?.error || "Unknown error"));
       if (err === "NO_KEY" || err === "DAILY_LIMIT") lastError = err;
@@ -390,7 +426,18 @@
       chips.push(`<span class="pw-chip pw-pay" data-tip="${esc(payTip)}">${parts.filter(Boolean).join(" ")}${scope}${check}${refining}</span>`);
       if (badges.housing && r.is_internship && r.housing_amount) {
         const h = r.housing_period === "month" ? `${money(r.housing_amount, cur, 0)}/mo` : money(r.housing_amount, cur, 0);
-        chips.push(`<span class="pw-chip pw-housing" data-tip="Housing stipend${r.housing_period === "month" ? " (monthly)" : " (lump sum)"}">🏠 ${h} housing</span>`);
+        // Housing is labeled on its own: its number can come from a different place than the pay.
+        const hs = r.housing_scope || r.pay_scope;
+        const kind = r.housing_period === "month" ? "monthly" : "lump sum";
+        const hTag =
+          hs === "reported" ? (badges.verified ? verifiedCheck(`Confirmed housing · ${r.pay_source || "Known pay"}`) : "")
+          : hs === "community" ? (badges.verified ? communityCheck(`housing · ${r.pay_source || "offer"}`) : "")
+          : ` <span class="pw-dim">${hs === "edited" ? "edited" : "est."}</span>`;
+        const hTip =
+          hs === "reported" ? `Housing stipend (${kind}), confirmed by you.`
+          : hs === "community" ? `Housing stipend (${kind}), from a community-reported offer.`
+          : `Housing stipend (${kind}). Estimated, not confirmed.`;
+        chips.push(`<span class="pw-chip pw-housing" data-tip="${esc(hTip)}">🏠 ${h} housing${hTag}</span>`);
       }
     } else if (r.refining) {
       chips.push(`<span class="pw-chip pw-wait" data-tip="Digging deeper for this role's pay…"><span class="pw-spin"></span>checking pay…</span>`);
@@ -417,18 +464,18 @@
       more.onclick = (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        chrome.runtime.sendMessage({ type: "pw:allowMore", searches: 500, calls: 1000 }, () => {
+        send({ type: "pw:allowMore", searches: 500, calls: 1000 }, () => {
           lastError = null;
-          scan();
+          scheduleScan();
         });
       };
     row.firstChild.onclick = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      if (noKey || limit) chrome.runtime.sendMessage({ type: "pw:options" });
+      if (noKey || limit) send({ type: "pw:options" });
       else {
         errors.delete(e.key);
-        scan();
+        scheduleScan();
       }
     };
   }

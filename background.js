@@ -792,7 +792,9 @@ function applyKnownPay(results, entries, list, scope = "reported") {
       is_internship: intern,
       pay_amount: k.monthly ?? k.hourly ?? k.annual ?? null,
       pay_period: k.monthly ? "month" : k.hourly ? "hour" : k.annual ? "year" : null,
-      ...(k.housing != null ? { housing_amount: k.housing, housing_period: k.housing_period || "month" } : {}),
+      ...(k.housing != null
+        ? { housing_amount: k.housing, housing_period: k.housing_period || "month", housing_scope: scope }
+        : { housing_scope: r.housing_amount ? r.housing_scope || r.pay_scope || "company" : null }), // housing stays an estimate
       currency: k.currency || "USD",
       pay_scope: scope,
       pay_source: scope === "community" ? `${k.source || "Offer"} · community-reported` : k.source || "your Known pay list",
