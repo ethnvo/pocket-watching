@@ -14,7 +14,10 @@
   {
     "company": "Amazon",
     "role": "SDE Intern",
-    "monthly": 10000,
-    "intern": true
+    "monthly": 10200,
+    "housing": 2200,
+    "housing_period": "month",
+    "intern": true,
+    "v": 2
   }
 ]

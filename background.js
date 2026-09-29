@@ -65,13 +65,15 @@ chrome.runtime.onInstalled.addListener(async () => {
   const have = await chrome.storage.local.get(["knownPay", "knownCompanies", "seededIds"]);
   const load = (f) => fetch(chrome.runtime.getURL(f)).then((r) => r.json()).catch(() => []);
   const id = (k) => `${norm(k.company)}|${norm(k.role)}`;
+  // Seed rows carry an optional version "v"; bumping it pushes the new row to existing installs.
+  const seedId = (k) => `${id(k)}@${k.v || 1}`;
   const seeded = new Set(have.seededIds || []);
   // Add seed rows that were never seeded before (a row you deleted stays deleted).
   const merge = (list = [], seed) => {
     const out = [...list];
     for (const row of seed) {
-      if (seeded.has(id(row))) continue;
-      seeded.add(id(row));
+      if (seeded.has(seedId(row)) || (!row.v && seeded.has(id(row)))) continue;
+      seeded.add(seedId(row));
       const i = out.findIndex((k) => id(k) === id(row));
       if (i >= 0) out[i] = row; else out.push(row);
     }
@@ -119,11 +121,11 @@ function pump() {
 
 async function lookup(entries, profile) {
   const results = {};
-  const keys = entries.map((e) => `v8:${e.key}`);
+  const keys = entries.map((e) => `v9:${e.key}`);
   const cached = await chrome.storage.local.get(keys);
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`v8:${e.key}`];
+    const hit = cached[`v9:${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
@@ -182,9 +184,9 @@ B) PAY. Rules, in priority order:
 C) PRESTIGE TIER — how impressive/selective THIS SPECIFIC ROLE at THIS company is. The role matters as much as the company: rate the seat, not the logo.
   THANOS = the absolute peak: core roles at top quant/HFT/prop firms (Jane Street, Citadel/Citadel Securities, Hudson River Trading, Jump, Two Sigma, DE Shaw, Optiver, IMC, SIG, Five Rings, Radix, Tower) — quant trader, quant researcher, quant dev, SWE; research scientist/engineer at frontier AI labs (OpenAI, Anthropic, Google DeepMind); FOUNDING ENGINEER / first engineers at a legit, VC-backed startup (YC, a16z, Sequoia, etc.) — that seat beats a regular SWE job at big tech.
   S = elite & hyper-selective: SWE/eng at frontier AI labs or the hottest top startups, MBB consulting, elite rotational APM programs (Google APM, Meta RPM), top-bucket IB.
-  A = strong core roles at Big Tech / top unicorns: SWE/ML/eng at Google, Meta, Apple, Nvidia, Netflix, Microsoft, Amazon, Stripe, Databricks, etc.
-  B = good but not elite: non-core or less-selective roles at big tech (e.g. a product/PM or program-manager internship at Amazon is B, not A), core roles at well-known large companies (Visa, Salesforce, Adobe, big banks' tech), Big 4.
-  MID = decent: solid respectable job that isn't impressive — mid-size/regional companies, defense contractors, non-tech corporate roles, funded startups with no notable brand.
+  A = strong, selective core roles at Big Tech / top unicorns: SWE/ML/eng at Google, Meta, Apple, Nvidia, Netflix, Microsoft, Stripe, Databricks, etc.
+  B = good but not elite: Amazon SDE/SWE (high-volume hiring, less selective than the rest of FAANG), non-core or less-selective roles at big tech (a PM or program-manager internship at Amazon is B or lower), core roles at well-known large companies (Visa, Salesforce, Adobe, big banks' tech), Big 4.
+  MID = decent, RECOGNIZABLE companies: established mid-size/large companies people have heard of, regional names, defense primes, well-funded startups with a real brand. Being verified to exist is not enough — small or obscure private companies and early startups are C.
   C = the DEFAULT for any company that isn't well known — small/lesser-known startups and companies, anything you can't verify — unless a role bump below applies. Also a peripheral role anywhere.
   D = non-selective or unrelated role (e.g. retail, food service) or clearly fake/placeholder company.
   ROLE BUMPS / DROPS:
@@ -250,7 +252,7 @@ ${list}`;
     const item = e ? normalizePay(raw) : raw;
     if (!e) continue;
     results[e.key] = item;
-    toStore[`v8:${e.key}`] = { at: Date.now(), data: item };
+    toStore[`v9:${e.key}`] = { at: Date.now(), data: item };
 
     // Feed the shared cache (keyed on the scraped hint so the next lookup can find it).
     const h = e.hint || {};
