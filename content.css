@@ -1,0 +1,73 @@
+.pw-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; font: 600 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+.pw-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 999px; background: #eef1f4; color: #38434f; white-space: nowrap; cursor: default; }
+.pw-pay { background: #e3f4e8; color: #1d6b3a; font-variant-numeric: tabular-nums; }
+.pw-dim { color: #7a8591; font-weight: 500; }
+.pw-pay .pw-dim { color: #4f8a64; }
+.pw-wait { color: #7a8591; font-weight: 500; }
+.pw-err { background: #fde8e8; color: #a23636; cursor: pointer; }
+.pw-spin { width: 10px; height: 10px; border: 2px solid #c9d0d7; border-top-color: #5a6672; border-radius: 50%; animation: pw-spin .8s linear infinite; }
+@keyframes pw-spin { to { transform: rotate(360deg); } }
+
+/* tiers */
+.pw-tier { letter-spacing: .3px; }
+.pw-t-THANOS { background: linear-gradient(135deg, #7b2ff7, #4a0fb0); color: #fff; box-shadow: 0 0 0 1px #9d5cff inset, 0 0 10px rgba(140, 70, 255, .55); letter-spacing: .8px; font-weight: 800; }
+.pw-t-S { background: linear-gradient(135deg, #ffe27a, #f5b700); color: #4a3500; box-shadow: 0 0 0 1px #e0a800 inset; }
+.pw-t-A { background: #e4e9ff; color: #2d3fb0; }
+.pw-t-B { background: #e2f3f8; color: #146a82; }
+.pw-t-MID { background: #eceff2; color: #56606b; }
+.pw-t-C { background: #f1ede4; color: #6b5a33; }
+.pw-t-D { background: #eeeeee; color: #6a6a6a; }
+
+/* flags */
+.pw-larp { background: #ff5a36; color: #fff; font-weight: 800; letter-spacing: .6px; }
+.pw-unpaid { background: #f3f0e6; color: #7a6b3a; }
+.pw-unverified { background: transparent; color: #8a6d00; box-shadow: 0 0 0 1px #d8c26a inset; font-weight: 500; }
+
+/* company categories */
+.pw-cat { font-weight: 700; }
+.pw-ico { font-size: 11px; line-height: 1; }
+.pw-c-faang { background: linear-gradient(135deg, #ff4d4d, #ff9a3c); color: #fff; }
+.pw-c-faangplus { background: linear-gradient(135deg, #ff4d4d, #ff9a3c); color: #fff; box-shadow: 0 0 0 2px #ffd166 inset; }
+.pw-c-faanglite { background: #fff0e3; color: #c2560c; box-shadow: 0 0 0 1px #ffc9a0 inset; }
+.pw-c-ailab { background: linear-gradient(135deg, #0fb5ae, #7b61ff); color: #fff; }
+.pw-c-quant { background: #0b0f0c; color: #39ff88; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; box-shadow: 0 0 0 1px #1f7a45 inset, 0 0 8px rgba(57, 255, 136, .35); }
+.pw-c-hedge { background: linear-gradient(135deg, #0d1b3d, #1c2f63); color: #f2c94c; box-shadow: 0 0 0 1px #b8923a inset; }
+.pw-c-fintech { background: linear-gradient(135deg, #10b981, #0e7490); color: #fff; }
+.pw-c-bigtech { background: #e6ecf5; color: #2c4a7a; }
+.pw-c-unicorn { background: linear-gradient(135deg, #ffd6f5, #d9c8ff); color: #6b2fa3; }
+.pw-c-startup { background: transparent; color: #d0591b; box-shadow: 0 0 0 1px #f3a877 inset; }
+.pw-c-bank { background: #1f3a5f; color: #e7eef8; }
+.pw-c-consulting { background: #e3efe6; color: #1f5a37; }
+.pw-c-defense { background: #e5e7d8; color: #4d5226; }
+.pw-c-school { background: #eaf1fb; color: #3a5d8f; }
+.pw-c-plain { background: transparent; color: #56606b; box-shadow: 0 0 0 1px #d3d9df inset; font-weight: 500; }
+
+/* LinkedIn dark theme (detected from the page background, not the OS setting) */
+html.pw-dark .pw-chip { background: #2a2f36; color: #d5dbe1; }
+html.pw-dark .pw-pay { background: #1c3a27; color: #8fe0aa; }
+html.pw-dark .pw-err { background: #4a2323; color: #f4a6a6; }
+html.pw-dark .pw-t-A { background: #252f5c; color: #b6c2ff; }
+html.pw-dark .pw-t-B { background: #183a44; color: #9fd8e8; }
+html.pw-dark .pw-t-MID { background: #30343a; color: #b9c0c8; }
+html.pw-dark .pw-t-C { background: #3a3326; color: #e2cf9f; }
+html.pw-dark .pw-t-D { background: #333; color: #aaa; }
+html.pw-dark .pw-unpaid { background: #3a3526; color: #d9c98f; }
+html.pw-dark .pw-unverified { background: transparent; color: #e0c66a; box-shadow: 0 0 0 1px #6b5a1f inset; }
+html.pw-dark .pw-c-faanglite { background: #3d2616; color: #ffb27a; box-shadow: 0 0 0 1px #6b3a18 inset; }
+html.pw-dark .pw-c-bigtech { background: #1f2c40; color: #a9c3ec; }
+html.pw-dark .pw-c-startup { background: transparent; color: #ff9a5c; box-shadow: 0 0 0 1px #7a3d18 inset; }
+html.pw-dark .pw-c-consulting { background: #1c3325; color: #9fdab4; }
+html.pw-dark .pw-c-defense { background: #33351f; color: #d3d6a6; }
+html.pw-dark .pw-c-school { background: #1c2a3d; color: #a8c4ea; }
+html.pw-dark .pw-c-plain { background: transparent; color: #aab2bb; box-shadow: 0 0 0 1px #3d434a inset; }
+html.pw-dark .pw-c-unicorn { background: linear-gradient(135deg, #5a2a6b, #3d2f7a); color: #f0d6ff; }
+/* saturated chips (THANOS, S, FAANG, AI Lab, Quant, Hedge Fund, Fintech, Bank, LARP) keep their colors */
+html.pw-dark .pw-t-THANOS { background: linear-gradient(135deg, #7b2ff7, #4a0fb0); color: #fff; }
+html.pw-dark .pw-t-S { background: linear-gradient(135deg, #ffe27a, #f5b700); color: #4a3500; }
+html.pw-dark .pw-c-faang, html.pw-dark .pw-c-faangplus { background: linear-gradient(135deg, #ff4d4d, #ff9a3c); color: #fff; }
+html.pw-dark .pw-c-ailab { background: linear-gradient(135deg, #0fb5ae, #7b61ff); color: #fff; }
+html.pw-dark .pw-c-quant { background: #0b0f0c; color: #39ff88; }
+html.pw-dark .pw-c-hedge { background: linear-gradient(135deg, #0d1b3d, #1c2f63); color: #f2c94c; }
+html.pw-dark .pw-c-fintech { background: linear-gradient(135deg, #10b981, #0e7490); color: #fff; }
+html.pw-dark .pw-c-bank { background: #1f3a5f; color: #e7eef8; }
+html.pw-dark .pw-larp { background: #ff5a36; color: #fff; }

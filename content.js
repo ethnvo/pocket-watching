@@ -1,0 +1,315 @@
+// Pocket Watching — content script. Finds each entry in a LinkedIn profile's
+// Experience section and adds inline badges: prestige tier + pay.
+
+(() => {
+  const DATE_RE = /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?\s?\d{4}\s*[-–]\s*(?:Present|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)?\s?\d{4})/;
+  const SECTION_HEADINGS = /^(Experience|Education|Volunteering|Volunteer experience|Licenses & certifications|Projects|Honors & awards|Courses|Publications|Organizations|Test scores)$/;
+  const TIER_LABELS = { THANOS: "THANOS tier", S: "S tier", A: "A tier", B: "B tier", MID: "Mid tier", C: "C tier", D: "D tier" };
+  const ITEM_SEL = '[componentkey^="entity-collection-item"]';
+
+  const results = new Map();   // entry key -> result
+  const pending = new Set();   // keys currently being looked up
+  let lastError = null;         // global errors only (e.g. no API key)
+  const errors = new Map();    // entry key -> error message
+  let scanTimer = null;
+  let lastSlug = null;
+  let firstSeenAt = 0;         // when experience entries first appeared on this page
+  let storedEdu = { slug: null, text: "" };
+
+  new MutationObserver(scheduleScan).observe(document.documentElement, { childList: true, subtree: true });
+  scheduleScan();
+
+  function scheduleScan() {
+    clearTimeout(scanTimer);
+    scanTimer = setTimeout(scan, 600);
+  }
+
+  async function scan() {
+    if (!location.pathname.startsWith("/in/")) return;
+    const entries = findEntries();
+    if (!entries.length || slug() !== lastSlug) {
+      lastSlug = slug();
+      firstSeenAt = 0;
+      if (!entries.length) return;
+    }
+    if (!firstSeenAt) firstSeenAt = Date.now();
+
+    const ctx = await profileContext();
+    // On the main profile page Education renders after Experience — give it a moment
+    // so we know whether they're still a student before judging titles/pay.
+    if (!ctx.education && !isDetailsPage() && Date.now() - firstSeenAt < 3000) {
+      entries.forEach((e) => results.has(e.key + ctx.hash) || render(e, null));
+      return scheduleScan();
+    }
+    entries.forEach((e) => (e.key += ctx.hash));
+
+    const missing = [];
+    for (const e of entries) {
+      if (results.has(e.key)) render(e, results.get(e.key));
+      else if (lastError) renderError(e, lastError);
+      else if (errors.has(e.key)) renderError(e, errors.get(e.key));
+      else {
+        render(e, null);
+        if (!pending.has(e.key)) missing.push(e);
+      }
+    }
+    missing.forEach((e) => lookup(e, ctx));
+  }
+
+  // One request per entry so each badge fills in as soon as its own search finishes.
+  function lookup(e, ctx) {
+    pending.add(e.key);
+    const profile = { name: ctx.name, headline: ctx.headline, education: ctx.education };
+    const entry = { key: e.key, text: e.text, group: e.group, hint: parseHint(e) };
+    chrome.runtime.sendMessage({ type: "pw:lookup", entries: [entry], profile }, (resp) => {
+      pending.delete(e.key);
+      const err = chrome.runtime.lastError?.message || (!resp?.ok && (resp?.error || "Unknown error"));
+      if (err === "NO_KEY") lastError = err;
+      else if (err) errors.set(e.key, err);
+      else if (resp.results[e.key]) results.set(e.key, resp.results[e.key]);
+      else errors.set(e.key, "No result for this entry");
+      scheduleScan();
+    });
+  }
+
+  // ---------- DOM discovery ----------
+
+  function findEntries() {
+    const leaves = [...document.querySelectorAll("main p, main span, main div")].filter(
+      (el) => el.childElementCount === 0 && DATE_RE.test(el.textContent) && el.textContent.length < 80
+    );
+    const seen = new Set();
+    const out = [];
+    for (const dateEl of leaves) {
+      if (dateEl.closest(".pw-row")) continue;
+      if (sectionOf(dateEl) !== "Experience") continue;
+      const block = dateEl.parentElement;
+      if (!block || seen.has(block)) continue;
+      seen.add(block);
+
+      const text = textOf(block);
+      // Grouped roles (one company, several positions): the company lives in the outer item's header.
+      const inner = dateEl.closest(ITEM_SEL);
+      const outer = inner?.parentElement?.closest(ITEM_SEL);
+      const group = outer ? textOf(outer).split("\n").slice(0, 2).join(" · ") : "";
+      out.push({ key: hash(group + "\n" + text), text, group, dateEl });
+    }
+    return out;
+  }
+
+  const sectionCache = new WeakMap();
+  function sectionOf(el) {
+    if (sectionCache.has(el)) return sectionCache.get(el);
+    const s = findSection(el)?.name || null;
+    if (s) sectionCache.set(el, s); // don't cache misses — the heading may not have rendered yet
+    return s;
+  }
+
+  function findSection(el) {
+    let p = el.parentElement;
+    for (let i = 0; i < 18 && p && p !== document.body; i++, p = p.parentElement) {
+      const first = (p.innerText || "").trimStart().split("\n")[0].trim();
+      if (SECTION_HEADINGS.test(first)) return { name: first, el: p };
+    }
+    return null;
+  }
+
+  // ---------- profile context (are they still a student?) ----------
+
+  const isDetailsPage = () => /^\/in\/[^/]+\/details\//.test(location.pathname);
+  const slug = () => location.pathname.split("/")[2] || "";
+
+  async function profileContext() {
+    const name = document.title.split("|")[0].replace(/^\(\d+\)\s*/, "").trim();
+    const headline = headlineFor(name);
+
+    let education = "";
+    const eduDate = [...document.querySelectorAll("main p, main span, main div")].find(
+      (el) => el.childElementCount === 0 && DATE_RE.test(el.textContent) && sectionOf(el) === "Education"
+    );
+    const eduSection = eduDate && findSection(eduDate);
+    if (eduSection) education = tidy(eduSection.el.innerText).slice(0, 1500);
+
+    const sl = slug();
+    if (education) {
+      if (storedEdu.slug !== sl || storedEdu.text !== education) {
+        storedEdu = { slug: sl, text: education };
+        chrome.storage.local.set({ [`edu:${sl}`]: education });
+      }
+    } else {
+      if (storedEdu.slug !== sl) {
+        const got = await chrome.storage.local.get(`edu:${sl}`);
+        storedEdu = { slug: sl, text: got[`edu:${sl}`] || "" };
+      }
+      education = storedEdu.text;
+    }
+    return { name, headline, education, hash: "." + hash(headline + "\n" + education) };
+  }
+
+  // The headline is the first text after the person's name (top card or sticky header).
+  function headlineFor(name) {
+    if (!name) return "";
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let found = false;
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const t = n.textContent.trim();
+      if (!t) continue;
+      if (!found) found = t === name;
+      else if (t !== name && t.length > 3 && !/^(·|\d+(st|nd|rd|th)|He\/Him|She\/Her|They\/Them)/i.test(t)) return t.slice(0, 200);
+    }
+    return "";
+  }
+
+  // ---------- rendering ----------
+
+  function syncTheme() {
+    const m = getComputedStyle(document.body).backgroundColor.match(/\d+/g);
+    const dark = m && (0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2]) < 100 && (m[3] === undefined || m[3] !== "0");
+    document.documentElement.classList.toggle("pw-dark", !!dark);
+  }
+
+  function rowFor(e) {
+    syncTheme();
+    const block = e.dateEl.parentElement;
+    let row = block.querySelector(":scope > .pw-row");
+    if (!row) {
+      row = document.createElement("div");
+      row.className = "pw-row";
+      block.append(row);
+    }
+    return row;
+  }
+
+  function render(e, r) {
+    const row = rowFor(e);
+    const sig = r ? "done" : "loading";
+    if (row.dataset.sig === sig) return;
+    row.dataset.sig = sig;
+    if (!r) {
+      row.innerHTML = `<span class="pw-chip pw-wait"><span class="pw-spin"></span>checking pockets…</span>`;
+      return;
+    }
+    const cur = r.currency || "USD";
+    const chips = [];
+    const tier = String(r.tier || "").toUpperCase();
+    if (TIER_LABELS[tier]) {
+      chips.push(`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`);
+    }
+    if (r.larp) {
+      chips.push(`<span class="pw-chip pw-larp" title="${esc(r.larp_reason || "Listed as a full-time title while still in school")}">LARP</span>`);
+    }
+    const cat = categoryChip(r);
+    if (cat) chips.push(cat);
+    if (r.verified === false) {
+      chips.push(`<span class="pw-chip pw-unverified" title="${esc(r.verify_note || "Couldn't confirm this company/role or its pay online")}">unverified</span>`);
+    }
+    if (r.unpaid) {
+      chips.push(`<span class="pw-chip pw-unpaid" title="${esc(r.pay_basis || "")}">unpaid</span>`);
+    } else if (r.pay_hourly || r.pay_annual) {
+      const parts = r.is_internship
+        ? [money(r.pay_hourly, cur, 0) + "/hr", r.pay_monthly ? money(r.pay_monthly, cur, 0) + "/mo" : null]
+        : [money(r.pay_annual, cur, 0, true) + "/yr", r.pay_hourly ? money(r.pay_hourly, cur, 0) + "/hr" : null];
+      const scope =
+        r.pay_scope === "reported" ? ` <span class="pw-dim">✓</span>` :
+        r.pay_scope === "company" ? "" : ` <span class="pw-dim">mkt</span>`;
+      chips.push(`<span class="pw-chip pw-pay" title="${esc(r.pay_basis || "")}">${parts.filter(Boolean).join(" · ")}${scope}</span>`);
+    } else if (r.pay_basis) {
+      chips.push(`<span class="pw-chip pw-dim" title="${esc(r.pay_basis)}">pay n/a</span>`);
+    }
+    row.innerHTML = chips.join("");
+  }
+
+  function renderError(e, err) {
+    const row = rowFor(e);
+    if (row.dataset.sig === "err") return;
+    row.dataset.sig = "err";
+    const noKey = err === "NO_KEY";
+    row.innerHTML = `<span class="pw-chip pw-err" title="${esc(err)}">⌚ ${noKey ? "add Gemini key" : "lookup failed — retry"}</span>`;
+    row.firstChild.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (noKey) chrome.runtime.sendMessage({ type: "pw:options" });
+      else {
+        errors.delete(e.key);
+        scan();
+      }
+    };
+  }
+
+  const CATEGORIES = {
+    "FAANG": { cls: "faang", icon: "★" },
+    "FAANG+": { cls: "faangplus", icon: "★" },
+    "FAANG-lite": { cls: "faanglite", icon: "☆" },
+    "AI Lab": { cls: "ailab", icon: "✦" },
+    "Quant": { cls: "quant", icon: "∑" },
+    "Hedge Fund": { cls: "hedge", icon: "◆" },
+    "Fintech": { cls: "fintech", icon: "$" },
+    "Big Tech": { cls: "bigtech", icon: "▣" },
+    "Unicorn": { cls: "unicorn", icon: "🦄" },
+    "Startup": { cls: "startup", icon: "🚀" },
+    "Bank": { cls: "bank", icon: "🏦" },
+    "Consulting": { cls: "consulting", icon: "◇" },
+    "Defense": { cls: "defense", icon: "⛨" },
+    "University": { cls: "school", icon: "🎓" },
+    "Student org": { cls: "school", icon: "🎓" },
+    "Government": { cls: "plain", icon: "🏛" },
+  };
+
+  function categoryChip(r) {
+    const name = r.category || r.company_type;
+    if (!name) return "";
+    const c = CATEGORIES[name] || { cls: "plain", icon: "" };
+    // Funding round only means something for regular startups; a unicorn is just $1B+.
+    const label = name === "Startup" && r.stage ? `${r.stage} startup` : name;
+    return `<span class="pw-chip pw-cat pw-c-${c.cls}">${c.icon ? `<span class="pw-ico">${c.icon}</span>` : ""}${esc(label)}</span>`;
+  }
+
+  // ---------- utils ----------
+
+  function money(n, cur, digits, compact) {
+    if (n == null || isNaN(n)) return "—";
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency", currency: cur, maximumFractionDigits: digits,
+        ...(compact ? { notation: "compact" } : {}),
+      }).format(n);
+    } catch {
+      return `${Math.round(n)} ${cur}`;
+    }
+  }
+
+  // Rough title/company/location parse — only used as a key for the shared company/pay cache.
+  function parseHint(e) {
+    const lines = e.text.split("\n").map((l) => l.trim()).filter(Boolean);
+    const d = lines.findIndex((l) => DATE_RE.test(l));
+    const title = lines[0] || "";
+    const companyLine = d >= 2 ? lines[1] : e.group || "";
+    const company = companyLine.split("·")[0].trim();
+    const type = (companyLine.split("·")[1] || "").trim();
+    const loc = d >= 0 && lines[d + 1] && lines[d + 1].length < 60 ? lines[d + 1].split("·")[0].trim() : "";
+    return { title, company, type, location: loc };
+  }
+
+  // innerText of an element, minus any badge rows we injected (they'd change the entry's key).
+  function textOf(el) {
+    const rows = [...el.querySelectorAll(".pw-row")];
+    rows.forEach((r) => (r.style.display = "none"));
+    const t = tidy(el.innerText);
+    rows.forEach((r) => (r.style.display = ""));
+    return t;
+  }
+
+  function tidy(t) {
+    return (t || "").replace(/\n{2,}/g, "\n").trim();
+  }
+
+  function hash(s) {
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(36);
+  }
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  }
+})();

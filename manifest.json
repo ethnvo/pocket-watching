@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Pocket Watching",
+  "version": "1.0.0",
+  "description": "On any LinkedIn profile, shows their latest role and the median pay for that role in their location.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://generativelanguage.googleapis.com/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "action": { "default_title": "Pocket Watching settings" },
+  "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" }
+}

@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Pocket Watching — Settings</title>
+<style>
+  body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; max-width: 520px; margin: 40px auto; padding: 0 16px; color: #1b1e24; }
+  h1 { font-size: 20px; } label { display: block; font-weight: 600; margin-top: 16px; }
+  input { width: 100%; padding: 8px 10px; font: inherit; border: 1px solid #ccd; border-radius: 8px; margin-top: 4px; }
+  button { margin-top: 16px; padding: 8px 16px; font: inherit; border: 0; border-radius: 8px; background: #1b1e24; color: #fff; cursor: pointer; }
+  .hint { color: #667; font-size: 12.5px; } #status { margin-left: 10px; color: #2a8a4a; }
+</style>
+</head>
+<body>
+  <h1>⌚ Pocket Watching</h1>
+  <p class="hint">Get a free Gemini API key at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>. It's stored only in your Chrome profile.</p>
+  <label>Gemini API key <input id="apiKey" type="password" placeholder="AIza…"></label>
+  <label>Model <input id="model" placeholder="gemini-2.5-flash"></label>
+  <p class="hint">Leave blank for the default. Any Gemini model that supports Google Search grounding works.</p>
+  <button id="save">Save</button><span id="status"></span>
+  <button id="clear" style="background:#eee;color:#1b1e24;margin-left:8px">Clear cache</button>
+  <h2 style="font-size:16px;margin-top:32px">Known pay</h2>
+  <p class="hint">Exact pay you know for a company/role. Overrides Gemini's estimate and shows a ✓ on the badge. Leave role blank to apply to any role at that company.</p>
+  <table id="known" style="width:100%;border-collapse:collapse;font-size:13px"></table>
+  <div style="display:grid;grid-template-columns:1.2fr 1.4fr .7fr .9fr auto;gap:6px;align-items:end;margin-top:8px">
+    <input id="kpCompany" placeholder="Company">
+    <input id="kpRole" placeholder="Role (optional)">
+    <input id="kpAmount" placeholder="Pay" inputmode="decimal">
+    <select id="kpUnit" style="padding:8px;border:1px solid #ccd;border-radius:8px;font:inherit"><option value="hr">/hr intern</option><option value="hrft">/hr full-time</option><option value="yr">/yr full-time</option></select>
+    <button id="kpAdd" style="margin:0">Add</button>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
