@@ -89,7 +89,8 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "pw:options") return void chrome.runtime.openOptionsPage();
   if (msg?.type !== "pw:lookup") return;
-  limited(() => lookup(msg.entries, msg.profile || {}))
+  const job = msg.kind === "edu" ? () => lookupEdu(msg.entries) : () => lookup(msg.entries, msg.profile || {});
+  limited(job)
     .then((results) => sendResponse({ ok: true, results }))
     .catch((err) => sendResponse({ ok: false, error: String(err?.message || err) }));
   return true; // async response
@@ -241,31 +242,7 @@ ${profile.education || "(not visible on this page)"}
 ${knownFacts}ENTRIES:
 ${list}`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-    model || DEFAULT_MODEL
-  )}:generateContent`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      tools: [{ google_search: {} }],
-      generationConfig: {
-        temperature: 0.2,
-        // 2.5-series models think by default, which is most of the latency. This task
-        // is lookup + judgement, so skip it.
-        ...(/^gemini-2\.5-flash/.test(model || DEFAULT_MODEL) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
-      },
-    }),
-  });
-
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body?.error?.message || `Gemini HTTP ${res.status}`);
-
-  const text = (body.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
-  const arr = parseJsonArray(text);
-  if (!arr) throw new Error("Couldn't parse model response");
+  const arr = await callGemini(prompt, apiKey, model);
 
   const toStore = {};
   for (const raw of arr) {
@@ -360,6 +337,91 @@ function applyKnownPay(results, entries, list) {
     };
     results[e.key] = withPayMath(base, hourly);
   }
+  return results;
+}
+
+async function callGemini(prompt, apiKey, model) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+    model || DEFAULT_MODEL
+  )}:generateContent`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: {
+        temperature: 0.2,
+        // 2.5-series models think by default, which is most of the latency. This task
+        // is lookup + judgement, so skip it.
+        ...(/^gemini-2\.5-flash/.test(model || DEFAULT_MODEL) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+      },
+    }),
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error?.message || `Gemini HTTP ${res.status}`);
+
+  const text = (body.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
+  const arr = parseJsonArray(text);
+  if (!arr) throw new Error("Couldn't parse model response");
+  return arr;
+}
+
+// ---------- Education: school + program prestige ----------
+
+async function lookupEdu(entries) {
+  const results = {};
+  const cached = await chrome.storage.local.get(entries.map((e) => `school1:${e.key}`));
+  const misses = [];
+  for (const e of entries) {
+    const hit = cached[`school1:${e.key}`];
+    if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
+    else misses.push(e);
+  }
+  if (!misses.length) return results;
+
+  const { apiKey, model } = await chrome.storage.sync.get(["apiKey", "model"]);
+  if (!apiKey) throw new Error("NO_KEY");
+
+  const list = misses.map((e, i) => `#${i}\n${e.text}`).join("\n\n");
+  const prompt = `Rate each education entry (scraped from a LinkedIn Education section) for prestige in tech recruiting. BOTH the school and the specific program/major matter — rate the program, not just the logo. Answer from your own knowledge; only search for schools you don't know.
+
+TIERS:
+  THANOS = the absolute peak for CS: MIT (EECS/CS), Stanford (CS), Carnegie Mellon (SCS / CS).
+  S = elite: UC Berkeley EECS or CS, Caltech, Princeton, Harvard, Cornell, UIUC CS, UW (Allen School) CS, Waterloo CS/SE/CE, Georgia Tech CS, Oxford/Cambridge CS, ETH Zurich.
+  A = strong: other top-25 CS programs (e.g. UCLA, UCSD, Michigan, UT Austin, Columbia, Penn, Purdue, Maryland, USC, Wisconsin), or an elite school with a non-CS STEM major.
+  B = good: solid top-50 CS programs and strong state flagships, or an elite school with a non-STEM major.
+  MID = decent: regional/state universities and less competitive programs.
+  C = lesser-known colleges, community colleges, bootcamps.
+  D = unaccredited programs, certificate mills.
+  Grad programs: rate the grad program itself — a low-selectivity, cash-cow master's is about one tier below that school's undergrad CS. PhDs at top programs rank at the top of their school's tier.
+  High school, certificates, courses, and anything that isn't a college degree → tier null.
+
+Respond with ONLY a JSON array (no markdown fences), one object per entry, same order:
+[{
+  "i": number,
+  "school": string,
+  "program": string | null,     // major/degree as listed
+  "level": "undergrad" | "grad" | "phd" | "high school" | "bootcamp" | "other",
+  "tier": "THANOS" | "S" | "A" | "B" | "MID" | "C" | "D" | null,
+  "label": string | null,       // very short, e.g. "Top 5 CS", "Top 20 CS", "Ivy", "UC", "Community college", "Bootcamp"
+  "tier_reason": string         // one short sentence
+}]
+
+ENTRIES:
+${list}`;
+
+  const arr = await callGemini(prompt, apiKey, model);
+  const toStore = {};
+  for (const item of arr) {
+    const e = misses[item?.i];
+    if (!e) continue;
+    results[e.key] = item;
+    toStore[`school1:${e.key}`] = { at: Date.now(), data: item };
+  }
+  await chrome.storage.local.set(toStore);
   return results;
 }
 

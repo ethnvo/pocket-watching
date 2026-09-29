@@ -1,6 +1,6 @@
 # Pocket Watching ⌚
 
-Chrome extension that badges every entry in a LinkedIn profile's Experience section with a prestige tier, company category, and pay (company-specific when available). Powered by Gemini with Google Search grounding.
+Chrome extension that badges every Experience entry on a LinkedIn profile with a prestige tier, company category, and pay (company-specific when available), and every Education entry with a school + program tier. Powered by Gemini with Google Search grounding.
 
 ## Install
 1. `chrome://extensions` → Developer mode → **Load unpacked** → this folder.

@@ -61,7 +61,7 @@
     pending.add(e.key);
     const profile = { name: ctx.name, headline: ctx.headline, education: ctx.education };
     const entry = { key: e.key, text: e.text, group: e.group, hint: parseHint(e) };
-    chrome.runtime.sendMessage({ type: "pw:lookup", entries: [entry], profile }, (resp) => {
+    chrome.runtime.sendMessage({ type: "pw:lookup", kind: e.kind, entries: [entry], profile }, (resp) => {
       pending.delete(e.key);
       const err = chrome.runtime.lastError?.message || (!resp?.ok && (resp?.error || "Unknown error"));
       if (err === "NO_KEY") lastError = err;
@@ -82,7 +82,9 @@
     const out = [];
     for (const dateEl of leaves) {
       if (dateEl.closest(".pw-row")) continue;
-      if (sectionOf(dateEl) !== "Experience") continue;
+      const section = sectionOf(dateEl);
+      if (section !== "Experience" && section !== "Education") continue;
+      const kind = section === "Education" ? "edu" : "exp";
       const block = dateEl.parentElement;
       if (!block || seen.has(block)) continue;
       seen.add(block);
@@ -92,7 +94,7 @@
       const inner = dateEl.closest(ITEM_SEL);
       const outer = inner?.parentElement?.closest(ITEM_SEL);
       const group = outer ? textOf(outer).split("\n").slice(0, 2).join(" · ") : "";
-      out.push({ key: hash(group + "\n" + text), text, group, dateEl });
+      out.push({ key: hash(kind + "\n" + group + "\n" + text), kind, text, group, dateEl });
     }
     return out;
   }
@@ -186,9 +188,10 @@
     if (row.dataset.sig === sig) return;
     row.dataset.sig = sig;
     if (!r) {
-      row.innerHTML = `<span class="pw-chip pw-wait"><span class="pw-spin"></span>checking pockets…</span>`;
+      row.innerHTML = `<span class="pw-chip pw-wait"><span class="pw-spin"></span>${e.kind === "edu" ? "checking school…" : "checking pockets…"}</span>`;
       return;
     }
+    if (e.kind === "edu") return void (row.innerHTML = eduChips(r));
     const cur = r.currency || "USD";
     const chips = [];
     const tier = String(r.tier || "").toUpperCase();
@@ -250,6 +253,14 @@
         scan();
       }
     };
+  }
+
+  function eduChips(r) {
+    const tier = String(r.tier || "").toUpperCase();
+    if (!TIER_LABELS[tier]) return ""; // high school, certificates, etc.
+    const chips = [`<span class="pw-chip pw-tier pw-t-${tier}" title="${esc(r.tier_reason || "")}">${TIER_LABELS[tier]}</span>`];
+    if (r.label) chips.push(`<span class="pw-chip pw-cat pw-c-school"><span class="pw-ico">🎓</span>${esc(r.label)}</span>`);
+    return chips.join("");
   }
 
   const CATEGORIES = {
