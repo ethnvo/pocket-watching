@@ -685,4 +685,6 @@
   function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   }
+  // Test hook: tests/harness.mjs sets __PW_TEST__ before loading this file. No-op in the extension.
+  if (globalThis.__PW_TEST__) globalThis.__PW_TEST__.content = { render, findEntries, scan, parseHint, results, errors, loadBadges, get dead() { return dead; } };
 })();
