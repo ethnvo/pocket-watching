@@ -1,0 +1,35 @@
+{
+  "name": "a community-reported offer applies",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "community": [
+    {
+      "company": "Acme Robotics",
+      "role": "Software Engineer Intern",
+      "hourly": 52,
+      "intern": true,
+      "location": "San Jose, California",
+      "source": "Summer 2025 offer"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_scope": "community",
+        "pay_hourly": 52
+      }
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "deep dive finds nothing either",
+  "knownBug": "When the deep dive also finds no pay, a real paid job shows \"pay n/a\" (the product rule says never n/a for a real job)",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "pay_amount": null
+        }
+      ]
+    ],
+    "deepDive": [
+      [
+        {
+          "pay_amount": null,
+          "pay_period": null,
+          "level": null,
+          "estimate": true,
+          "pay_basis": "nothing"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "refining": false
+      }
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "role with no company on the page",
+  "entries": [
+    {
+      "text": "Founder\nJun 2024 - Present",
+      "group": ""
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "ft",
+          "role": "Founder",
+          "company": null,
+          "category": null,
+          "pay_amount": null,
+          "employment": "full-time",
+          "pay_basis": "Founder — no salary known"
+        }
+      ]
+    ]
+  }
+}

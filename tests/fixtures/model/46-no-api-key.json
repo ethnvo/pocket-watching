@@ -1,0 +1,21 @@
+{
+  "name": "no Gemini key set",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "sync": {
+    "apiKey": null
+  },
+  "gemini": {},
+  "expect": {
+    "response": {
+      "ok": false,
+      "error": "NO_KEY"
+    },
+    "calls": {
+      "lookup": 0
+    }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "club priced and tiered by the model",
+  "entries": [
+    {
+      "text": "Treasurer\nRobotics Club at UCI\nSep 2023 - Present\nIrvine, California"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "role": "Treasurer",
+          "company": "Robotics Club at UCI",
+          "is_internship": false,
+          "employment": "part-time",
+          "pay_amount": 20,
+          "category": "Startup",
+          "tier": "A"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "unpaid": true,
+        "tier": null,
+        "pay_hourly": null,
+        "category": "Student org"
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "incoming intern flagged LARP by the model",
+  "entries": [
+    {
+      "text": "Incoming Software Engineer Intern\nAcme Robotics · Internship\nJun 2027 - Sep 2027"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "larp": true,
+          "larp_reason": "no evidence"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "larp": false
+      }
+    }
+  }
+}

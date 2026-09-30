@@ -1,0 +1,26 @@
+{
+  "name": "Unicorn without a sourced valuation becomes Startup",
+  "entries": [
+    {
+      "text": "Software Engineer\nAcme Robotics · Full-time\nJul 2024 - Present · 1 yr 3 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "ft",
+          "category": "Unicorn",
+          "valuation": null
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "category": "Startup"
+      }
+    }
+  }
+}

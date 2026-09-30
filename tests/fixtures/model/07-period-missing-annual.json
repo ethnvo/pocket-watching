@@ -1,0 +1,26 @@
+{
+  "name": "no period, annual-sized amount",
+  "entries": [
+    {
+      "text": "Software Engineer\nAcme Robotics · Full-time\nJul 2024 - Present · 1 yr 3 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "ft",
+          "pay_amount": 175000,
+          "pay_period": null
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_annual": 175000
+      }
+    }
+  }
+}

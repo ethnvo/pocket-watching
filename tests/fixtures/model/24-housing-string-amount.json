@@ -1,0 +1,20 @@
+{
+  "name": "housing_amount as a \"$2,500\" string",
+  "knownBug": "housing_amount \"$2,500\" isn't parsed: the badge shows \"🏠 —/mo housing\"",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "housing_amount": "$2,500",
+          "housing_period": "month"
+        }
+      ]
+    ]
+  }
+}

@@ -1410,3 +1410,7 @@ If a "bug" turns out to be a product decision (for example, whether 13-deep-dive
 ## Known bugs found
 
 (Filled in during Tasks 3–6.)
+
+1. `13-deep-dive-returns-null` — when the deep dive also finds no pay, a real paid job shows "pay n/a". **Product decision** (show n/a, or a labelled rough estimate?) — ask.
+2. `24-housing-string-amount` — `housing_amount: "$2,500"` isn't parsed; badge shows "🏠 —/mo housing".
+3. `47-hourly-too-high` — an absurd $4000/hr estimate is shown as-is; nothing rejects out-of-range pay.

@@ -1,0 +1,7 @@
+{
+  "name": "market estimate whose source is the same company in another city",
+  "why": "User screenshot 2026-09-29: tooltip said no pay found for this company but Source named Hexagon",
+  "entries": [{ "text": "AI/ML Software Engineering Intern\nHexagon Manufacturing Intelligence · Internship\nJun 2026 - Present · 4 mos\nSan Jose, California, United States · Remote" }],
+  "gemini": { "lookup": [[{ "$base": "intern", "role": "AI/ML Software Engineering Intern", "company": "Hexagon Manufacturing Intelligence", "category": "Big Tech", "pay_amount": 57.15, "pay_scope": "market", "pay_basis": "Indeed - Software Engineer Intern at Hexagon in San Francisco, CA, estimated average pay" }]] },
+  "expect": { "results": { "0": { "pay_scope": "market", "pay_hourly": 57.15 } } }
+}

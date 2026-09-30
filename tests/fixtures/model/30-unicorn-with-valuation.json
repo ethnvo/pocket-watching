@@ -1,0 +1,28 @@
+{
+  "name": "Unicorn with a sourced $1B+ valuation stays",
+  "entries": [
+    {
+      "text": "Software Engineer\nAcme Robotics · Full-time\nJul 2024 - Present · 1 yr 3 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "ft",
+          "category": "Unicorn",
+          "valuation": 1150000000,
+          "valuation_source": "TechCrunch",
+          "round_name": "Series C"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "category": "Unicorn"
+      }
+    }
+  }
+}

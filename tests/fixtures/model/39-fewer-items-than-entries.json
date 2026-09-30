@@ -1,0 +1,31 @@
+{
+  "name": "one answer for two entries",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    },
+    {
+      "text": "Software Engineer\nAcme Robotics · Full-time\nJul 2024 - Present · 1 yr 3 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "i": 0
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_hourly": 45
+      },
+      "1": {
+        "$absent": true
+      }
+    }
+  }
+}

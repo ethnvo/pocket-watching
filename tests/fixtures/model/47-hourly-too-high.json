@@ -1,0 +1,20 @@
+{
+  "name": "absurd hourly figure",
+  "knownBug": "An absurd $4000/hr estimate is shown as-is; nothing rejects out-of-range pay",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "pay_amount": 4000,
+          "pay_period": "hour"
+        }
+      ]
+    ]
+  }
+}

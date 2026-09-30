@@ -1,0 +1,27 @@
+{
+  "name": "pay in a \"tc\" field instead of pay_amount",
+  "entries": [
+    {
+      "text": "Software Engineer\nAcme Robotics · Full-time\nJul 2024 - Present · 1 yr 3 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "ft",
+          "pay_amount": null,
+          "pay_period": null,
+          "tc": "$190,000"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_annual": 190000
+      }
+    }
+  }
+}

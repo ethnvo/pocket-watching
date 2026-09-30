@@ -1,0 +1,57 @@
+{
+  "name": "earlier Amazon role estimated above the later one",
+  "entries": [
+    {
+      "text": "SDE II\nJan 2025 - Present · 9 mos\nSeattle, WA",
+      "group": "Amazon · 2 yrs 1 mo"
+    },
+    {
+      "text": "SDE I\nSep 2023 - Dec 2024 · 1 yr 4 mos",
+      "group": "Amazon · 2 yrs 1 mo"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "ft",
+          "i": 0,
+          "role": "SDE II",
+          "company": "Amazon",
+          "location": "Seattle, WA",
+          "level": "SDE II",
+          "pay_amount": 240000
+        },
+        {
+          "$base": "ft",
+          "i": 1,
+          "role": "SDE I",
+          "company": "Amazon",
+          "location": "Seattle, WA",
+          "level": "SDE I",
+          "pay_amount": 300000
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_annual": {
+          "$range": [
+            220000,
+            280000
+          ]
+        }
+      },
+      "1": {
+        "pay_annual": {
+          "$range": [
+            160000,
+            190000
+          ]
+        }
+      }
+    }
+  }
+}

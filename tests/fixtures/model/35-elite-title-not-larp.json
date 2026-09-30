@@ -1,0 +1,29 @@
+{
+  "name": "MTS at Anthropic is a real title",
+  "entries": [
+    {
+      "text": "Member of Technical Staff\nAnthropic · Full-time\nJan 2026 - Present\nSan Francisco, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "ft",
+          "role": "Member of Technical Staff",
+          "company": "Anthropic",
+          "pay_amount": 400000,
+          "larp": true
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "category": "MANGO",
+        "larp": false
+      }
+    }
+  }
+}

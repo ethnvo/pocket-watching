@@ -1,0 +1,26 @@
+{
+  "name": "lump-sum housing",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "housing_amount": 6000,
+          "housing_period": "total"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "housing_total": 6000
+      }
+    }
+  }
+}

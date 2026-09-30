@@ -1,0 +1,43 @@
+{
+  "name": "zero pay triggers a deep dive with a best estimate",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "pay_amount": 0,
+          "pay_basis": "No data found"
+        }
+      ]
+    ],
+    "deepDive": [
+      [
+        {
+          "pay_amount": 47,
+          "pay_period": "hour",
+          "level": null,
+          "estimate": true,
+          "pay_basis": "Levels.fyi comparable robotics interns"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_hourly": 47,
+        "pay_scope": "market",
+        "refined": true
+      }
+    },
+    "calls": {
+      "lookup": 1,
+      "deepDive": 1
+    }
+  }
+}

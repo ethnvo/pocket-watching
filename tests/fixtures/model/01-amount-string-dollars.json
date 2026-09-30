@@ -1,0 +1,7 @@
+{
+  "name": "pay_amount as a \"$52.50\" string",
+  "why": "Convert pay deterministically from the quoted amount",
+  "entries": [{ "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States" }],
+  "gemini": { "lookup": [[{ "$base": "intern", "pay_amount": "$52.50", "pay_period": "hour" }]] },
+  "expect": { "response": { "ok": true }, "results": { "0": { "pay_hourly": 52.5, "pay_annual": null, "pay_period": "hour" } }, "calls": { "lookup": 1 } }
+}

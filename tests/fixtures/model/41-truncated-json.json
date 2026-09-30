@@ -1,0 +1,21 @@
+{
+  "name": "truncated JSON",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      "[{\"i\":0,\"role\":\"Software"
+    ]
+  },
+  "expect": {
+    "response": {
+      "ok": false,
+      "error": {
+        "$match": "parse"
+      }
+    }
+  }
+}

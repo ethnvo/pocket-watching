@@ -1,0 +1,26 @@
+{
+  "name": "ordinary club title flagged LARP by the model",
+  "entries": [
+    {
+      "text": "Treasurer\nRobotics Club at UCI\nSep 2023 - Present\nIrvine, California"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "club",
+          "larp": true,
+          "larp_reason": "inflated"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "larp": false
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Facebook is Meta (MANGO)",
+  "entries": [
+    {
+      "text": "Software Engineer\nFacebook · Full-time\nJul 2019 - Jun 2021\nMenlo Park, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "ft",
+          "company": "Facebook",
+          "category": "Big Tech"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "category": "MANGO"
+      }
+    }
+  }
+}

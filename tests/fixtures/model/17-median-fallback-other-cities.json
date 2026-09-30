@@ -1,0 +1,44 @@
+{
+  "name": "low figure here, known pay in other US cities → median",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "knownPay": [
+    {
+      "company": "Acme Robotics",
+      "role": "Software Engineer Intern",
+      "hourly": 50,
+      "intern": true,
+      "location": "Seattle, Washington",
+      "source": "offer"
+    },
+    {
+      "company": "Acme Robotics",
+      "role": "Software Engineer Intern",
+      "hourly": 46,
+      "intern": true,
+      "location": "Austin, Texas",
+      "source": "offer"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "pay_amount": 25
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_scope": "median",
+        "pay_hourly": 48
+      }
+    }
+  }
+}

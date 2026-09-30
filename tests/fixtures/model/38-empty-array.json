@@ -1,0 +1,23 @@
+{
+  "name": "model returns an empty array",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      "[]"
+    ]
+  },
+  "expect": {
+    "response": {
+      "ok": true
+    },
+    "results": {
+      "0": {
+        "$absent": true
+      }
+    }
+  }
+}

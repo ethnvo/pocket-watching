@@ -1,0 +1,19 @@
+{
+  "name": "housing with no period",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "housing_amount": 3000,
+          "housing_period": null
+        }
+      ]
+    ]
+  }
+}

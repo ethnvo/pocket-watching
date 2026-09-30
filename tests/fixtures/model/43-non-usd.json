@@ -1,0 +1,29 @@
+{
+  "name": "EUR monthly salary",
+  "entries": [
+    {
+      "text": "Software Engineer\nAcme Robotics · Full-time\nJul 2024 - Present\nBerlin, Germany"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "ft",
+          "location": "Berlin",
+          "currency": "EUR",
+          "pay_amount": 2500,
+          "pay_period": "month"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "currency": "EUR",
+        "pay_annual": 30000
+      }
+    }
+  }
+}

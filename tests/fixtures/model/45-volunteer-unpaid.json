@@ -1,0 +1,27 @@
+{
+  "name": "volunteering is unpaid",
+  "entries": [
+    {
+      "text": "Volunteer Tutor\nGirls Who Code · Volunteer\nJan 2023 - Present"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "club",
+          "role": "Volunteer Tutor",
+          "company": "Girls Who Code",
+          "category": "Volunteer"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "unpaid": true
+      }
+    }
+  }
+}

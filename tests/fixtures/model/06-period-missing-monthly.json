@@ -1,0 +1,27 @@
+{
+  "name": "no period, monthly-sized amount",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "pay_amount": 9000,
+          "pay_period": null
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_period": "month",
+        "pay_hourly": 51.92
+      }
+    }
+  }
+}

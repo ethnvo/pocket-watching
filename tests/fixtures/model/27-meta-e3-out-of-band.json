@@ -1,0 +1,33 @@
+{
+  "name": "Meta E3 figure a level too high snaps into the band",
+  "entries": [
+    {
+      "text": "Software Engineer\nMeta · Full-time\nJul 2025 - Present\nMenlo Park, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "ft",
+          "company": "Meta",
+          "level": "E3",
+          "pay_amount": 370000
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "category": "MANGO",
+        "pay_annual": {
+          "$range": [
+            185000,
+            195000
+          ]
+        }
+      }
+    }
+  }
+}

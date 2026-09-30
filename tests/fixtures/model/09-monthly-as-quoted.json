@@ -1,0 +1,28 @@
+{
+  "name": "monthly intern salary kept as quoted",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "pay_amount": 10200,
+          "pay_period": "month"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_period": "month",
+        "pay_amount": 10200,
+        "pay_hourly": 58.85
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "answer wrapped in ```json fences with prose around it",
+  "entries": [
+    {
+      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      "Here you go:\n```json\n[{\"i\": 0, \"role\": \"Software Engineer Intern\", \"company\": \"Acme Robotics\", \"location\": \"San Jose, CA\", \"is_internship\": true, \"pay_amount\": 45, \"pay_period\": \"hour\", \"skip\": false, \"employment\": \"internship\", \"level\": null, \"housing_amount\": null, \"housing_period\": null, \"currency\": \"USD\", \"pay_scope\": \"company\", \"pay_basis\": \"Glassdoor \\u2014 Acme Robotics SWE intern (4 reports)\", \"tier\": \"C\", \"category\": \"Private co\", \"stage\": null, \"valuation\": null, \"round_name\": null, \"round_amount\": null, \"round_date\": null, \"valuation_source\": null, \"yc_batch\": null, \"larp\": false, \"larp_reason\": null, \"unpaid\": false, \"verified\": true, \"verify_note\": null, \"tier_reason\": \"Engineering intern at a small company.\"}]\n```\nLet me know if you need more."
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_hourly": 45
+      }
+    }
+  }
+}

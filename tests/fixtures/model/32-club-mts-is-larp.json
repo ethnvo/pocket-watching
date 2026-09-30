@@ -1,0 +1,26 @@
+{
+  "name": "Member of Technical Staff at a club is LARP",
+  "entries": [
+    {
+      "text": "Member of Technical Staff\nAI Club at UCI\nSep 2023 - Present"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "club",
+          "role": "Member of Technical Staff",
+          "company": "AI Club at UCI"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "larp": true
+      }
+    }
+  }
+}

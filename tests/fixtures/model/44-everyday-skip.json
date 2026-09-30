@@ -1,0 +1,27 @@
+{
+  "name": "everyday job the model skips",
+  "entries": [
+    {
+      "text": "Barista\nStarbucks · Part-time\nJun 2021 - Aug 2022"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "skip": true,
+          "role": "Barista",
+          "company": "Starbucks"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "skip": true
+      }
+    }
+  }
+}

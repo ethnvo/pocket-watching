@@ -1,0 +1,38 @@
+{
+  "name": "low FAANG pay, re-check finds nothing",
+  "entries": [
+    {
+      "text": "Software Development Engineer Intern\nAmazon · Internship\nJun 2025 - Sep 2025\nSeattle, Washington, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "role": "Software Development Engineer Intern",
+          "company": "Amazon",
+          "location": "Seattle, WA",
+          "pay_amount": 19,
+          "pay_basis": "Indeed — average Amazon internship pay"
+        }
+      ]
+    ],
+    "recheck": [
+      [
+        {
+          "pay_amount": null,
+          "pay_period": null,
+          "pay_basis": "none"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "refining": false
+      }
+    }
+  }
+}

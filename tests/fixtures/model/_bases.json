@@ -1,0 +1,32 @@
+{
+  "intern": {
+    "i": 0, "role": "Software Engineer Intern", "company": "Acme Robotics", "location": "San Jose, CA",
+    "is_internship": true, "pay_amount": 45, "pay_period": "hour", "skip": false, "employment": "internship",
+    "level": null, "housing_amount": null, "housing_period": null, "currency": "USD",
+    "pay_scope": "company", "pay_basis": "Glassdoor — Acme Robotics SWE intern (4 reports)",
+    "tier": "C", "category": "Private co", "stage": null, "valuation": null, "round_name": null,
+    "round_amount": null, "round_date": null, "valuation_source": null, "yc_batch": null,
+    "larp": false, "larp_reason": null, "unpaid": false, "verified": true, "verify_note": null,
+    "tier_reason": "Engineering intern at a small company."
+  },
+  "ft": {
+    "i": 0, "role": "Software Engineer", "company": "Acme Robotics", "location": "San Jose, CA",
+    "is_internship": false, "pay_amount": 150000, "pay_period": "year", "skip": false, "employment": "full-time",
+    "level": null, "housing_amount": null, "housing_period": null, "currency": "USD",
+    "pay_scope": "company", "pay_basis": "Levels.fyi — Acme Robotics SWE (6 data points)",
+    "tier": "C", "category": "Private co", "stage": null, "valuation": null, "round_name": null,
+    "round_amount": null, "round_date": null, "valuation_source": null, "yc_batch": null,
+    "larp": false, "larp_reason": null, "unpaid": false, "verified": true, "verify_note": null,
+    "tier_reason": "Engineer at a small company."
+  },
+  "club": {
+    "i": 0, "role": "Treasurer", "company": "Robotics Club at UCI", "location": "Irvine, CA",
+    "is_internship": false, "pay_amount": null, "pay_period": null, "skip": false, "employment": "part-time",
+    "level": null, "housing_amount": null, "housing_period": null, "currency": "USD",
+    "pay_scope": null, "pay_basis": "Student organization — unpaid.",
+    "tier": null, "category": "Student org", "stage": null, "valuation": null, "round_name": null,
+    "round_amount": null, "round_date": null, "valuation_source": null, "yc_batch": null,
+    "larp": false, "larp_reason": null, "unpaid": true, "verified": true, "verify_note": null,
+    "tier_reason": "Club role."
+  }
+}
