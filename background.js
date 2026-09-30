@@ -53,9 +53,14 @@ function cleanPay(item) {
 // Estimated housing above these is a bad source (top big-tech stipends are ~$4K/mo).
 const HOUSING_MAX = { month: 5000, total: 12000 };
 const saneHousing = (item) => {
-  if (!item.housing_amount || /^(reported|community|edited)$/.test(item.housing_scope || "")) return item;
+  if (!item.housing_amount) return item;
+  // the model sometimes quotes it as a string: "$2,500"
+  const amount = parseMoney(item.housing_amount);
+  if (!amount) return { ...item, housing_amount: null, housing_period: null };
+  if (amount !== item.housing_amount) item = { ...item, housing_amount: amount };
+  if (/^(reported|community|edited)$/.test(item.housing_scope || "")) return item;
   const max = HOUSING_MAX[item.housing_period === "month" ? "month" : "total"];
-  return Number(item.housing_amount) > max ? { ...item, housing_amount: null, housing_period: null } : item;
+  return amount > max ? { ...item, housing_amount: null, housing_period: null } : item;
 };
 
 function withPayMath(item, hourly) {
