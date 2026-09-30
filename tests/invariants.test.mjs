@@ -73,6 +73,7 @@ test("8: an earlier role at the same company doesn't out-earn the later one", ()
 
 test("9: shown housing always has a label", () => {
   assert.ok(has(renderProblems(entry(INTERN_TEXT), intern, row(`<span class="pw-chip pw-housing">🏠 $2,500/mo housing</span>`)), /housing without a label/));
+  assert.deepEqual(renderProblems(entry(INTERN_TEXT), intern, row(`<span class="pw-chip pw-housing">🏠 $2,500/mo housing</span>`), { verified: false }), []);
 });
 
 test("10: tiers only as a compliment", () => {

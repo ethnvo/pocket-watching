@@ -59,7 +59,7 @@ export function resultProblems(entry, r, all = []) {
   return out;
 }
 
-export function renderProblems(entry, r, row) {
+export function renderProblems(entry, r, row, badges = {}) {
   if (!row) return r?.skip ? [] : ["no badge row rendered"];
   if (r?.skip) return row.hidden || !row.textContent.trim() ? [] : ["skipped entry still shows badges"];
   const out = [];
@@ -84,8 +84,8 @@ export function renderProblems(entry, r, row) {
     const est = [...chip.querySelectorAll(".pw-dim")].map((d) => d.textContent.trim()).find((t) => /^(est\.|est\. mkt|approx\.|median|edited)$/.test(t));
     if (solid && est) out.push(`"${est}" and a blue check on the same number: ${chip.textContent.trim()}`);
   }
-  // 9
-  for (const h of row.querySelectorAll(".pw-housing"))
+  // 9 (with blue checks turned off, confirmed housing is unmarked on purpose, like confirmed pay)
+  if (badges.verified !== false) for (const h of row.querySelectorAll(".pw-housing"))
     if (!h.querySelector(".pw-check, .pw-dim")) out.push(`housing without a label: ${h.textContent.trim()}`);
   // 10
   for (const t of row.querySelectorAll(".pw-tier"))
