@@ -114,7 +114,7 @@ Adding a new rule is the main way the suite grows.
   single role; grouped roles under one company; a group with no company line; a
   part-time job with no location; a club; an everyday job (skipped); an incoming role;
   the Education section rendering after Experience; the `/details/experience/` page;
-  non-English month names absent; duplicated visually-hidden text; our own `.pw-row`
+  a date range with no month (`2023 - 2024`); duplicated visually-hidden text; our own `.pw-row`
   already present.
   Each file has a sibling `.expect.json` listing the expected entries (kind, group,
   first line).
