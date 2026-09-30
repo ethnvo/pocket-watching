@@ -1,0 +1,31 @@
+{
+  "name": "small yearly stipend stays yearly",
+  "entries": [
+    {
+      "text": "Research Assistant\nUC Irvine · Part-time\nJan 2025 - Jun 2025\nIrvine, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "ft",
+          "role": "Research Assistant",
+          "company": "UC Irvine",
+          "employment": "part-time",
+          "category": "University",
+          "pay_amount": 12000,
+          "pay_period": "year"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_period": "year",
+        "pay_amount": 12000
+      }
+    }
+  }
+}

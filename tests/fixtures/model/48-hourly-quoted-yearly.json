@@ -1,5 +1,5 @@
 {
-  "name": "absurd hourly figure",
+  "name": "hourly-sized amount quoted per year",
   "entries": [
     {
       "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
@@ -10,8 +10,8 @@
       [
         {
           "$base": "intern",
-          "pay_amount": 4000,
-          "pay_period": "hour"
+          "pay_amount": 45,
+          "pay_period": "year"
         }
       ]
     ]
@@ -19,8 +19,8 @@
   "expect": {
     "results": {
       "0": {
-        "pay_period": "month",
-        "pay_hourly": 23.08
+        "pay_period": "hour",
+        "pay_hourly": 45
       }
     }
   }

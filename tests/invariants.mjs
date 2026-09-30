@@ -28,7 +28,8 @@ export function resultProblems(entry, r, all = []) {
   if (!r.unpaid && !PAY_EXEMPT.test(r.category || "") && onPage && !r.pay_hourly && !r.pay_annual)
     out.push("real paid job has no pay (would show pay n/a)");
   // 5
-  if (usd(r) && r.pay_hourly != null && (r.pay_hourly < 7 || r.pay_hourly > 250)) out.push(`hourly $${r.pay_hourly} outside $7–$250`);
+  // the $7 floor is for quoted hourly wages; a yearly/monthly stipend's "hourly" assumes 40 hrs/week
+  if (usd(r) && r.pay_hourly != null && ((r.pay_hourly < 7 && r.pay_period === "hour") || r.pay_hourly > 250)) out.push(`hourly $${r.pay_hourly} outside $7–$250`);
   if (usd(r) && !r.is_internship && employment(r) === "full-time" && r.pay_annual != null && (r.pay_annual < 30000 || r.pay_annual > 1500000))
     out.push(`full-time TC ${money(r.pay_annual)} outside $30K–$1.5M`);
   if (r.housing_amount != null && !REAL.test(r.housing_scope || r.pay_scope || "")) {

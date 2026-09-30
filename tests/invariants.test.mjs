@@ -39,7 +39,8 @@ test("4: a real paid job always has pay", () => {
 });
 
 test("5: sanity ranges", () => {
-  assert.ok(has(resultProblems(entry(INTERN_TEXT), { ...intern, pay_hourly: 4 }), /outside/));
+  assert.ok(has(resultProblems(entry(INTERN_TEXT), { ...intern, pay_hourly: 4, pay_period: "hour" }), /outside/));
+  assert.deepEqual(resultProblems(entry(INTERN_TEXT), { ...intern, is_internship: false, employment: "part-time", pay_hourly: 5.77, pay_period: "year" }), []);
   assert.ok(has(resultProblems(entry(INTERN_TEXT), { ...intern, pay_hourly: 400 }), /outside/));
   const ft = { company: "Acme Robotics", is_internship: false, employment: "full-time", pay_annual: 9000, currency: "USD" };
   assert.ok(has(resultProblems(entry("Software Engineer\nAcme Robotics\nJun 2024 - Present"), ft), /outside/));
