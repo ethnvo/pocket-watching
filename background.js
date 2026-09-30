@@ -260,6 +260,34 @@ Respond with ONLY a JSON array with one object: [{"pay_amount": number, "pay_per
       );
     }
   } catch {}
+  return roughEstimate(item, hint, apiKey, model, ft, where);
+}
+
+// The deep dive found nothing usable: ask for typical pay for the title — no search, so
+// the model answers from what it knows. Shown as "est. mkt" rather than "pay n/a".
+async function roughEstimate(item, hint, apiKey, model, ft, where) {
+  const title = hint?.title || item.role;
+  const prompt = `Estimate typical pay for "${title}"${item.level ? ` (level: ${item.level})` : ""}${where}, at a company like ${hint?.company || item.company}.
+${ft ? "Full-time: give yearly TOTAL COMPENSATION at the entry level unless the title says otherwise." : "Internship/part-time: give the hourly rate."}
+No exact data is needed — give your best estimate from comparable roles. Never return null.
+Respond with ONLY a JSON array with one object: [{"pay_amount": number, "pay_period": "hour" | "month" | "year", "pay_basis": string}] — pay_basis says briefly what the estimate is based on.`;
+  try {
+    const [r] = await callGemini(prompt, apiKey, model, { refinement: true, search: false });
+    const c = cleanPay({ ...r });
+    const hourly = toHourly(c.pay_amount, c.pay_period);
+    if (hourly) {
+      return withPayMath(
+        {
+          ...item,
+          pay_amount: c.pay_amount,
+          pay_period: c.pay_period,
+          pay_scope: "market",
+          pay_basis: `Rough estimate (no pay data found)${r.pay_basis ? ` — ${r.pay_basis}` : ""}`,
+        },
+        hourly
+      );
+    }
+  } catch {}
   return item;
 }
 

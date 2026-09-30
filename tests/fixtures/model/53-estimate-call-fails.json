@@ -1,5 +1,8 @@
 {
-  "name": "deep dive finds nothing → a rough market estimate instead of pay n/a",
+  "name": "estimate call fails too → pay n/a (the only case left)",
+  "allow": [
+    "real paid job has no pay"
+  ],
   "entries": [
     {
       "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
@@ -26,24 +29,17 @@
       ]
     ],
     "estimate": [
-      [
-        {
-          "pay_amount": 40,
-          "pay_period": "hour",
-          "pay_basis": "Typical software engineering intern pay in San Jose"
-        }
-      ]
+      {
+        "status": 503,
+        "error": "Service unavailable"
+      }
     ]
   },
   "expect": {
     "results": {
       "0": {
         "refining": false,
-        "pay_scope": "market",
-        "pay_hourly": 40,
-        "pay_basis": {
-          "$match": "^Rough estimate"
-        }
+        "pay_hourly": { "$absent": true }
       }
     },
     "calls": {

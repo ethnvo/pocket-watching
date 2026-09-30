@@ -64,5 +64,7 @@ export function fixtureProblems(fx, run, { live = false } = {}) {
     problems.push(...resultProblems(entry, r, all).map((p) => `[${entry.key}] ${p}`));
     problems.push(...renderProblems(entry, r, renderRow(entry, r)).map((p) => `[${entry.key}] render: ${p}`));
   }
-  return problems;
+  // a fixture can accept a problem that's the intended outcome (e.g. pay n/a when every call failed)
+  const allowed = (fx.allow || []).map((a) => new RegExp(a, "i"));
+  return problems.filter((p) => !allowed.some((re) => re.test(p)));
 }

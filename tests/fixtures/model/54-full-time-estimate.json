@@ -1,15 +1,15 @@
 {
-  "name": "deep dive finds nothing → a rough market estimate instead of pay n/a",
+  "name": "full-time with no data → yearly TC estimate",
   "entries": [
     {
-      "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
+      "text": "Software Engineer\nAcme Robotics · Full-time\nJul 2024 - Present · 1 yr 3 mos\nSan Jose, California, United States"
     }
   ],
   "gemini": {
     "lookup": [
       [
         {
-          "$base": "intern",
+          "$base": "ft",
           "pay_amount": null
         }
       ]
@@ -28,9 +28,9 @@
     "estimate": [
       [
         {
-          "pay_amount": 40,
-          "pay_period": "hour",
-          "pay_basis": "Typical software engineering intern pay in San Jose"
+          "pay_amount": 150000,
+          "pay_period": "year",
+          "pay_basis": "Typical entry-level SWE TC in San Jose"
         }
       ]
     ]
@@ -38,16 +38,11 @@
   "expect": {
     "results": {
       "0": {
-        "refining": false,
         "pay_scope": "market",
-        "pay_hourly": 40,
-        "pay_basis": {
-          "$match": "^Rough estimate"
-        }
+        "pay_annual": 150000
       }
     },
     "calls": {
-      "deepDive": 1,
       "estimate": 1
     }
   }

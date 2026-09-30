@@ -13,6 +13,7 @@ test("geminiKind routes prompts", () => {
   assert.equal(geminiKind('Find the pay for "SWE" at Acme.'), "deepDive");
   assert.equal(geminiKind('Find the hourly pay for a "SWE" internship at Acme.'), "recheck");
   assert.equal(geminiKind("Rate each education entry (scraped…"), "edu");
+  assert.equal(geminiKind('Estimate typical pay for "SWE Intern" in San Jose.'), "estimate");
   assert.equal(geminiKind("Today is 2026-09-29. Below are job entries…"), "lookup");
 });
 

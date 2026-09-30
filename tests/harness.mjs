@@ -36,6 +36,7 @@ export function geminiKind(prompt) {
   if (/^Find the hourly pay for/.test(prompt)) return "recheck";
   if (/^Find the pay for/.test(prompt)) return "deepDive";
   if (/^Rate each education entry/.test(prompt)) return "edu";
+  if (/^Estimate typical pay for/.test(prompt)) return "estimate";
   return "lookup";
 }
 

@@ -1,5 +1,5 @@
 {
-  "name": "deep dive finds nothing → a rough market estimate instead of pay n/a",
+  "name": "deep dive answer unreadable → rough estimate",
   "entries": [
     {
       "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
@@ -15,22 +15,14 @@
       ]
     ],
     "deepDive": [
-      [
-        {
-          "pay_amount": null,
-          "pay_period": null,
-          "level": null,
-          "estimate": true,
-          "pay_basis": "nothing"
-        }
-      ]
+      "Sorry, I couldn't find anything."
     ],
     "estimate": [
       [
         {
-          "pay_amount": 40,
+          "pay_amount": 38,
           "pay_period": "hour",
-          "pay_basis": "Typical software engineering intern pay in San Jose"
+          "pay_basis": "Typical SWE intern pay in San Jose"
         }
       ]
     ]
@@ -38,12 +30,8 @@
   "expect": {
     "results": {
       "0": {
-        "refining": false,
         "pay_scope": "market",
-        "pay_hourly": 40,
-        "pay_basis": {
-          "$match": "^Rough estimate"
-        }
+        "pay_hourly": 38
       }
     },
     "calls": {
