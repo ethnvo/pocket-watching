@@ -301,7 +301,7 @@
     if (education) {
       if (storedEdu.slug !== sl || storedEdu.text !== education) {
         storedEdu = { slug: sl, text: education };
-        chrome.storage.local.set({ [`edu:${sl}`]: education });
+        await chrome.storage.local.set({ [`edu:${sl}`]: education }); // awaited so a dead context lands in scan()'s catch, not an uncaught rejection
       }
     } else {
       if (storedEdu.slug !== sl) {
@@ -417,7 +417,7 @@
         community: `Community-reported: a real offer submitted to the Pocket Watching repo and reviewed. Not confirmed by you. · ${r.pay_source || ""}`,
         edited: "Estimate you corrected in Settings. Not confirmed.",
         company: "Approximate: pay found online for this company and role. Not confirmed, so it could be off.",
-        market: `Estimated market rate: no pay found for this company, so this is typical pay for the title${r.location ? ` in ${r.location}` : ""}.`,
+        market: `Estimated market rate: no reliable pay data for this role at this company, so this is a modeled estimate of typical pay for the title${r.location ? ` in ${r.location}` : ""}. The source below may be a similar role, location or company.`,
         median: "Estimate: the median of pay known for this role at this company in other US locations.",
       }[r.pay_scope] || "Estimate. Not confirmed.";
       const source = r.pay_scope === "reported" || r.pay_scope === "edited" || r.pay_scope === "community" ? "" : r.pay_basis ? `Source: ${r.pay_basis}` : "";
