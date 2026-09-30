@@ -1,0 +1,287 @@
+[
+  {
+    "name": "amazon-sde-intern-seattle",
+    "entries": [
+      {
+        "text": "Software Development Engineer Intern\nAmazon · Internship\nJun 2025 - Sep 2025\nSeattle, Washington, United States"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "category": "FAANG",
+          "pay_hourly": {
+            "$range": [
+              48,
+              70
+            ]
+          },
+          "is_internship": true
+        }
+      }
+    }
+  },
+  {
+    "name": "meta-e3",
+    "entries": [
+      {
+        "text": "Software Engineer\nMeta · Full-time\nJul 2025 - Present\nMenlo Park, California, United States"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "category": "MANGO",
+          "pay_annual": {
+            "$range": [
+              185000,
+              195000
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "google-l4",
+    "entries": [
+      {
+        "text": "Software Engineer III\nGoogle · Full-time\nJan 2024 - Present\nMountain View, California, United States"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "category": "MANGO",
+          "pay_annual": {
+            "$range": [
+              230000,
+              320000
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "uci-club",
+    "entries": [
+      {
+        "text": "Treasurer\nRobotics Club at UCI\nSep 2023 - Present"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "unpaid": true,
+          "tier": null
+        }
+      }
+    }
+  },
+  {
+    "name": "club-mts",
+    "entries": [
+      {
+        "text": "Member of Technical Staff\nAI Club at UCI\nSep 2023 - Present"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "larp": true
+        }
+      }
+    }
+  },
+  {
+    "name": "rivian-swe",
+    "entries": [
+      {
+        "text": "Software Engineer\nRivian · Full-time\nJul 2024 - Present\nIrvine, California, United States"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "category": {
+            "$match": "^(Public co|Big Tech)$"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "unknown-startup",
+    "entries": [
+      {
+        "text": "Software Engineer Intern\nZentrix Labs · Internship\nJun 2025 - Sep 2025\nIrvine, California, United States"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "pay_hourly": {
+            "$range": [
+              15,
+              60
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "jane-street-intern",
+    "entries": [
+      {
+        "text": "Software Engineer Intern\nJane Street · Internship\nJun 2025 - Aug 2025\nNew York, New York, United States"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "category": "Quant",
+          "tier": "THANOS"
+        }
+      }
+    }
+  },
+  {
+    "name": "incoming-intern",
+    "entries": [
+      {
+        "text": "Incoming Software Engineer Intern\nMeta · Internship\nJun 2027 - Sep 2027"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "larp": false,
+          "is_internship": true
+        }
+      }
+    }
+  },
+  {
+    "name": "uci-ta",
+    "entries": [
+      {
+        "text": "Teaching Assistant\nUniversity of California, Irvine · Part-time\nJan 2025 - Jun 2025\nIrvine, California, United States"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "category": "University",
+          "pay_hourly": {
+            "$range": [
+              18,
+              35
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "barista",
+    "entries": [
+      {
+        "text": "Barista\nStarbucks · Part-time\nJun 2021 - Aug 2022"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "skip": true
+        }
+      }
+    }
+  },
+  {
+    "name": "anthropic-mts",
+    "entries": [
+      {
+        "text": "Member of Technical Staff\nAnthropic · Full-time\nJan 2026 - Present\nSan Francisco, California, United States"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "category": "MANGO",
+          "larp": false,
+          "tier": "THANOS"
+        }
+      }
+    }
+  },
+  {
+    "name": "amazon-promotion",
+    "entries": [
+      {
+        "text": "SDE II\nJan 2025 - Present\nSeattle, WA",
+        "group": "Amazon · 2 yrs 1 mo"
+      },
+      {
+        "text": "SDE I\nSep 2023 - Dec 2024",
+        "group": "Amazon · 2 yrs 1 mo"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "pay_annual": {
+            "$range": [
+              220000,
+              280000
+            ]
+          }
+        },
+        "1": {
+          "pay_annual": {
+            "$range": [
+              160000,
+              190000
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "hexagon-intern",
+    "entries": [
+      {
+        "text": "AI/ML Software Engineering Intern\nHexagon Manufacturing Intelligence · Internship\nJun 2026 - Present\nSan Jose, California, United States · Remote"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "pay_hourly": {
+            "$range": [
+              30,
+              70
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "toronto-intern",
+    "entries": [
+      {
+        "text": "Software Engineer Intern\nShopify · Internship\nMay 2025 - Aug 2025\nToronto, Ontario, Canada"
+      }
+    ],
+    "expect": {
+      "results": {
+        "0": {
+          "currency": "CAD"
+        }
+      }
+    }
+  }
+]
