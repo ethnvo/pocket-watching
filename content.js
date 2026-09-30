@@ -658,7 +658,8 @@
     const title = lines[0] || "";
     const companyLine = d >= 2 ? lines[1] : e.group || "";
     const company = companyLine.split("·")[0].trim();
-    const type = (companyLine.split("·")[1] || "").trim();
+    // "Amazon · Internship" → Internship; a group header's "2 yrs 1 mo" is a length, not a type
+    const type = companyLine.split("·").slice(1).map((s) => s.trim()).find((s) => !/^\d+\s+(yrs?|mos?)\b/i.test(s)) || "";
     const loc = d >= 0 && lines[d + 1] && lines[d + 1].length < 60 ? lines[d + 1].split("·")[0].trim() : "";
     return { title, company, type, location: loc };
   }

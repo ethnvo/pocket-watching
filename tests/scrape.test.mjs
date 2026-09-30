@@ -58,11 +58,15 @@ test("education arrives late: lookups wait and include it", async () => {
   w.dispose();
 });
 
-test("grouped roles: parseHint's type is an employment type, not the group's length", { todo: "parseHint takes the group header's length (\"2 yrs 1 mo\") as the employment type, so grouped intern roles can miss intern-only Known pay" }, () => {
+test("grouped roles: parseHint's type is an employment type, not the group's length", () => {
   const html = fs.readFileSync(path.join(dir, "02-grouped-roles.html"), "utf8");
   const w = createWorld();
   const { api } = w.loadContent(html);
   const [first] = api.findEntries();
   assert.match(api.parseHint(first).type, /^(|full-time|part-time|internship|contract|self-employed|freelance|seasonal|apprenticeship)$/i);
   w.dispose();
+  const flat = createWorld();
+  const page = flat.loadContent(fs.readFileSync(path.join(dir, "03-group-flat.html"), "utf8"));
+  assert.equal(page.api.parseHint(page.api.findEntries()[0]).type, "Full-time");
+  flat.dispose();
 });
