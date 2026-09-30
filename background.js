@@ -285,7 +285,7 @@ Respond with ONLY a JSON array with one object: [{"pay_amount": number | null, "
   };
 }
 
-const JOB_CACHE = "v26:"; // per-entry job results (estimates); bump to re-run every lookup
+const JOB_CACHE = "v27:"; // per-entry job results (estimates); bump to re-run every lookup
 const CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;      // per-entry results
 const SHARED_TTL_MS = 30 * 24 * 60 * 60 * 1000;     // company facts + pay, shared across profiles
 
@@ -303,7 +303,7 @@ const canonCompany = (s) => {
 };
 const coKey = (company) => `co3:${canonCompany(company)}`;
 const payKey = (company, title, location, intern) =>
-  `pay2:${canonCompany(company)}|${norm(title)}|${norm(location)}|${intern ? "intern" : "ft"}`;
+  `pay3:${canonCompany(company)}|${norm(title)}|${norm(location)}|${intern ? "intern" : "ft"}`;
 
 chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
 
@@ -312,7 +312,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   const all = await chrome.storage.local.get(null);
   const monthAgo = new Date(Date.now() - 30 * 864e5).toLocaleDateString("en-CA");
   const stale = Object.keys(all).filter(
-    (k) => (/^v\d+:/.test(k) && !k.startsWith(JOB_CACHE)) || /^(entry|cache|school1|co|co2|pay):/.test(k) ||
+    (k) => (/^v\d+:/.test(k) && !k.startsWith(JOB_CACHE)) || /^(entry|cache|school1|co|co2|pay|pay2):/.test(k) ||
       (k.startsWith("usage:") && k.slice(6) < monthAgo)
   );
   if (stale.length) await chrome.storage.local.remove(stale);
@@ -517,7 +517,7 @@ async function lookup(entries, profile, tabId) {
       housing: k.housing || null,
       src: k.reference ? "unconfirmed" : k.community ? "community" : "reported",
     }));
-    const prefix = `pay2:${canonCompany(h.company)}|${norm(h.title)}|`;
+    const prefix = `pay3:${canonCompany(h.company)}|${norm(h.title)}|`;
     for (const [key, v] of Object.entries(allStored)) {
       if (!key.startsWith(prefix) || !v?.hourly || !v.location || Date.now() - v.at > SHARED_TTL_MS) continue;
       if (h.location && sameLocation(v.location, h.location)) continue;
