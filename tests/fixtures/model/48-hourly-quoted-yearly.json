@@ -1,5 +1,5 @@
 {
-  "name": "hourly-sized amount quoted per year",
+  "name": "hourly-sized amount quoted per year stays as quoted (never inflated)",
   "entries": [
     {
       "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States"
@@ -19,9 +19,9 @@
   "expect": {
     "results": {
       "0": {
-        "pay_period": "hour",
-        "pay_hourly": 45
+        "pay_period": "year"
       }
     }
-  }
+  },
+  "why": "Final review #1: re-reading small figures upward inflated real stipends ($200/month → $200/hr)"
 }

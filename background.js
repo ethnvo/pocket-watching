@@ -47,11 +47,10 @@ function cleanPay(item) {
   let period = normPeriod(item.pay_period) ||
     (item.tc != null || item.total_compensation != null || item.pay_annual != null ? "year" : item.pay_monthly != null ? "month" : null) ||
     inferPeriod(amount);
-  // A US figure that's absurd for its period ($4,000/hr, $45/yr) has the wrong period:
-  // go by the size of the number instead.
-  const hourly = toHourly(amount, period);
+  // A US figure that's absurd for its period ($4,000/hr) has the wrong period: go by the
+  // size of the number instead. Only downward — a small stipend ($200/month) stays as quoted.
   const guess = inferPeriod(amount), guessHourly = toHourly(amount, guess);
-  if ((!item.currency || item.currency === "USD") && (hourly > 250 || (hourly < 7 && guess === "hour")) && guessHourly >= 7 && guessHourly <= 250)
+  if ((!item.currency || item.currency === "USD") && toHourly(amount, period) > 250 && guessHourly >= 7 && guessHourly <= 250)
     period = guess;
   return { ...item, pay_amount: amount, pay_period: period };
 }

@@ -1,0 +1,37 @@
+{
+  "name": "a real $200/month stipend stays monthly (not $200/hr)",
+  "why": "Final review #1: the low-side period re-read inflated small stipends",
+  "entries": [
+    {
+      "text": "Campus Ambassador\nAcme Robotics · Part-time\nJan 2025 - Jun 2025\nIrvine, California, United States"
+    }
+  ],
+  "gemini": {
+    "lookup": [
+      [
+        {
+          "$base": "intern",
+          "role": "Campus Ambassador",
+          "is_internship": false,
+          "employment": "part-time",
+          "pay_amount": 200,
+          "pay_period": "month"
+        }
+      ]
+    ]
+  },
+  "expect": {
+    "results": {
+      "0": {
+        "pay_period": "month",
+        "pay_amount": 200,
+        "pay_hourly": {
+          "$range": [
+            0,
+            2
+          ]
+        }
+      }
+    }
+  }
+}
