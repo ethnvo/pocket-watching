@@ -83,6 +83,21 @@ After pulling changes, click the reload icon on the extension in `chrome://exten
 - `seed-pay.json` and `seed-companies.json` are pay and company overrides loaded on install. Your own entries live in Chrome storage.
 - `scripts/package.sh` builds the Chrome Web Store zip into `dist/`. The listing text, permission justifications and privacy answers are in [`store/LISTING.md`](store/LISTING.md).
 
+## Testing
+
+`npm install` once, then:
+
+- `npm test` runs the real extension code against fake LinkedIn pages and fake Gemini answers
+  (no network, no API key, a few seconds). Every case is checked against the rules in
+  `tests/invariants.mjs`: no `NaN`/`undefined` in badges, no "est." next to a blue check,
+  clubs unpaid, internships never annualized, and so on.
+- `GEMINI_API_KEY=… npm run eval` runs `eval/profiles.json` through the real Gemini prompt
+  (~15–30 calls) and saves failing answers to `eval/out/`.
+
+Saw a wrong badge? Save the entry and the model's answer as a file in
+`tests/fixtures/model/` (see the others; `"$base": "intern"` fills in the boring fields),
+or add a rule to `tests/invariants.mjs`, watch it fail, then fix it.
+
 ## Contributing
 
 Issues and pull requests are welcome, especially offers for community pay. See [CONTRIBUTING.md](CONTRIBUTING.md).
