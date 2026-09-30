@@ -1,0 +1,13 @@
+{
+  "url": "https://www.linkedin.com/in/test-person/details/experience/",
+  "entries": [
+    {
+      "kind": "exp",
+      "first": "Software Engineer"
+    },
+    {
+      "kind": "exp",
+      "first": "Software Engineer Intern"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "kind": "exp",
+      "first": "Software Engineer Intern",
+      "group": "",
+      "company": "Acme Robotics"
+    },
+    {
+      "kind": "edu",
+      "first": "University of California, Irvine"
+    }
+  ]
+}
