@@ -71,7 +71,7 @@ $("saveKey").onclick = async () => {
 $("testKey").onclick = async () => {
   const key = $("apiKey").value.trim();
   if (!key) return flash($("keyStatus"), "Paste a key first.", "err");
-  const model = $("model").value.trim() || "gemini-2.5-flash";
+  const model = $("model").value.trim() || "gemini-3.8-flash"; // keep in sync with background.js
   $("testKey").disabled = true;
   flash($("keyStatus"), "Testing…", "", 0);
   try {
@@ -86,7 +86,7 @@ $("testKey").onclick = async () => {
     const msg = body?.error?.message || "";
     if (res.ok) flash($("keyStatus"), `Key works with ${model}.`);
     else if (res.status === 429 && /limit: 0\b/.test(msg))
-      flash($("keyStatus"), `This key has no quota for ${model} ("limit: 0"). Try gemini-2.5-flash-lite, or turn on billing for the key's Google Cloud project.`, "err", 12000);
+      flash($("keyStatus"), `This key has no quota for ${model} ("limit: 0"). Clear the Model field to use the default (gemini-3.8-flash), or turn on billing for the key's Google Cloud project.`, "err", 12000);
     else if (res.status === 429)
       flash($("keyStatus"), `The key is valid but Gemini is rate-limiting it: ${msg || "HTTP 429"}`, "err", 12000);
     else flash($("keyStatus"), msg || `Gemini returned ${res.status}.`, "err", 6000);
@@ -469,7 +469,9 @@ async function renderUsage() {
   const k = `usage:${new Date().toLocaleDateString("en-CA")}`;
   const u = (await chrome.storage.local.get(k))[k] || { calls: 0, searches: 0, inTok: 0, outTok: 0 };
   const limits = { ...DEFAULT_LIMITS, ...(await chrome.storage.sync.get(Object.keys(DEFAULT_LIMITS))) };
-  const cost = u.inTok * 0.3e-6 + u.outTok * 2.5e-6 + Math.max(0, u.searches - 1500) * 0.035;
+  // Gemini 3.8 Flash prices. Searches are free up to 5,000 a month; we only track days,
+  // so this counts every search at $0.014 (an upper bound).
+  const cost = u.inTok * 0.75e-6 + u.outTok * 3.75e-6 + u.searches * 0.014;
   const callCap = limits.dailyCallLimit + (u.extraCalls || 0);
   const searchCap = limits.dailySearchLimit + (u.extraSearches || 0);
   $("usageStat").textContent =
@@ -485,7 +487,7 @@ $("saveLimits").onclick = async () => {
   const b = Math.max(0, Math.round(num($("dailyCallLimit").value)));
   if (!Number.isFinite(a) || !Number.isFinite(b)) return flash($("dataStatus"), "Limits must be numbers.", "err");
   await chrome.storage.sync.set({ dailySearchLimit: a, dailyCallLimit: b });
-  flash($("dataStatus"), a > 1500 ? "Limits saved. Above 1,500 searches a day, each search costs $0.035." : "Limits saved.");
+  flash($("dataStatus"), a > 166 ? "Limits saved. Past 5,000 web searches a month (about 166 a day), each costs $0.014." : "Limits saved.");
   renderUsage();
 };
 $("allowMore").onclick = () =>

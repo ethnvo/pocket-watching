@@ -461,7 +461,7 @@
       : quota ? err.replace(/^QUOTA\w*:\s*/, "") : err;
     const label = noKey ? "add Gemini key" : quota ? (quotaFixInSettings ? "Gemini quota — see why" : "Gemini busy — retry") : "lookup failed — retry";
     row.innerHTML = limit
-      ? `<span class="pw-chip pw-wait" data-tip="${esc(tip)}">⌚ daily limit reached</span><span class="pw-chip pw-more" data-act="more" data-tip="Raise today's limit by 500 web searches and 1,000 lookups, then keep going. Past 1,500 searches a day, each costs about $0.035.">allow 500 more</span>`
+      ? `<span class="pw-chip pw-wait" data-tip="${esc(tip)}">⌚ daily limit reached</span><span class="pw-chip pw-more" data-act="more" data-tip="Raise today's limit by 500 web searches and 1,000 lookups, then keep going. Past 5,000 searches a month, each costs about $0.014.">allow 500 more</span>`
       : `<span class="pw-chip pw-err" data-tip="${esc(tip)}">⌚ ${label}</span>`;
     const more = row.querySelector('[data-act="more"]');
     if (more)

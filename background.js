@@ -1,7 +1,8 @@
 // Pocket Watching — service worker. One Gemini call (with Google Search
 // grounding) per batch of experience entries: prestige tier + pay for each.
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
+// 2.5 models are closed to new API keys since Sept 2026 (a new key gets an instant 429).
+const DEFAULT_MODEL = "gemini-3.8-flash";
 // Pay math. Everything is derived from an hourly rate at 40 hrs/week:
 //  - paycheck (biweekly)  = hourly × 80
 //  - internship total     = hourly × 40 × INTERN_WEEKS  (12 weeks = 6 paychecks)
@@ -941,9 +942,9 @@ function applyKnownPay(results, entries, list, scope = "reported") {
 }
 
 // ---------- Usage + spending guard ----------
-// Gemini 2.5 Flash: $0.30 / 1M input tokens, $2.50 / 1M output, Google Search grounding
-// free for 1,500 prompts a day then $35 / 1,000. Limits are per day and set in Settings.
-const PRICE = { in: 0.3 / 1e6, out: 2.5 / 1e6, search: 35 / 1000, freeSearches: 1500 };
+// Gemini 3.8 Flash: $0.75 / 1M input tokens, $3.75 / 1M output (intro price through 2026),
+// Google Search grounding free for 5,000 searches a month across 3.x models, then $14 / 1,000.
+// Limits are per day and set in Settings; the cost math lives in options.js.
 const DEFAULT_LIMITS = { dailySearchLimit: 1000, dailyCallLimit: 2000 };
 const usageKey = () => `usage:${new Date().toLocaleDateString("en-CA")}`; // YYYY-MM-DD, local
 
@@ -1027,10 +1028,18 @@ function quotaWontClear(body) {
 function quotaMessage(body, model) {
   const msg = String(body?.error?.message || "");
   if (/limit: 0\b/.test(msg))
-    return `QUOTA_ZERO: Your Gemini key has no quota for ${model} (Google reports "limit: 0"), so every request is rejected before it runs — that's why your dashboard shows no requests. Pick a model your key's free tier includes in Settings (e.g. gemini-2.5-flash-lite), or turn on billing for the key's Google Cloud project.`;
+    return `QUOTA_ZERO: Your Gemini key has no quota for ${model} (Google reports "limit: 0"), so every request is rejected before it runs — that's why your dashboard shows no requests. Clear the Model field in Settings to use the default (gemini-3.8-flash), or pick another current model, or turn on billing for the key's Google Cloud project.`;
   if (/PerDay/i.test(msg + JSON.stringify(body?.error?.details || [])))
     return `QUOTA_DAY: Gemini's daily quota for ${model} on your key is used up. It resets at midnight Pacific; turn on billing for the key's project for higher limits.`;
   return `QUOTA: Gemini is rate-limiting your key (${msg || "HTTP 429"}). Try again in a minute.`;
+}
+
+// Models think by default, which is most of the latency. This task is lookup + judgement,
+// so keep thinking to a minimum. 3.x models take thinkingLevel ("minimal" isn't accepted
+// by 3.8 Flash) and should stay at their default temperature; 2.5 takes a token budget.
+function thinkingOff(model) {
+  if (/^gemini-[3-9]/.test(model)) return { thinkingConfig: { thinkingLevel: "low" } };
+  return { temperature: 0.2, ...(/^gemini-2\.5-flash/.test(model) ? { thinkingConfig: { thinkingBudget: 0 } } : {}) };
 }
 
 function postGemini(url, prompt, apiKey, model, search) {
@@ -1040,12 +1049,7 @@ function postGemini(url, prompt, apiKey, model, search) {
     body: JSON.stringify({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       ...(search ? { tools: [{ google_search: {} }] } : {}),
-      generationConfig: {
-        temperature: 0.2,
-        // 2.5-series models think by default, which is most of the latency. This task
-        // is lookup + judgement, so skip it.
-        ...(/^gemini-2\.5-flash/.test(model || DEFAULT_MODEL) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
-      },
+      generationConfig: thinkingOff(model || DEFAULT_MODEL),
     }),
   });
 }
