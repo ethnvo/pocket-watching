@@ -93,6 +93,13 @@
   chrome.storage.sync.get("badges", (v) => loadBadges(v.badges));
   chrome.storage.onChanged.addListener((ch, area) => {
     if (area === "sync" && ch.badges) loadBadges(ch.badges.newValue);
+    // A new key, model or limit can fix what failed, so retry instead of showing the old error
+    // (LinkedIn never reloads the page, so this tab would otherwise keep it).
+    if (area === "sync" && (ch.apiKey || ch.model || ch.dailySearchLimit || ch.dailyCallLimit)) {
+      lastError = null;
+      errors.clear();
+      scheduleScan();
+    }
   });
 
   // Import tabs (opened by Settings → Import) just scrape the jobs and report back.
