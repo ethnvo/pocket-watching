@@ -191,7 +191,7 @@ export function createWorld(opts = {}) {
       }
       if (answer && typeof answer === "object" && !Array.isArray(answer) && "status" in answer) {
         w.calls.push({ kind, prompt, text: null, status: answer.status });
-        return response(answer.status, { error: { message: answer.error } });
+        return response(answer.status, { error: { message: answer.error, ...(answer.details ? { details: answer.details } : {}) } });
       }
       const text = typeof answer === "string" ? answer : JSON.stringify(answer);
       w.calls.push({ kind, prompt, text, status: 200 });

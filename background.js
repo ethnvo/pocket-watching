@@ -987,7 +987,54 @@ async function callGemini(prompt, apiKey, model, { search = true, refinement = f
     model || DEFAULT_MODEL
   )}:generateContent`;
 
-  const res = await fetch(url, {
+  for (let attempt = 0; ; attempt++) {
+    const res = await postGemini(url, prompt, apiKey, model, search);
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 429) {
+      // Per-minute limits clear on their own: wait what Google asks (capped) and retry.
+      // A per-day limit, or "limit: 0" (no free quota for this model on this key), won't.
+      const wait = retryDelayMs(body);
+      if (attempt < 3 && wait != null && wait <= 60000 && !quotaWontClear(body)) {
+        await new Promise((r) => setTimeout(r, wait + 500));
+        continue;
+      }
+      throw new Error(quotaMessage(body, model || DEFAULT_MODEL));
+    }
+    // only successful calls are billed, so only they count toward the daily limits
+    if (!res.ok) throw new Error(body?.error?.message || `Gemini HTTP ${res.status}`);
+    // a grounded prompt is billed when the model actually ran a search
+    const searched = !!body.candidates?.[0]?.groundingMetadata?.webSearchQueries?.length;
+    await recordUsage(body, searched);
+
+    const text = (body.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
+    const arr = parseJsonArray(text);
+    if (!arr) throw new Error("Couldn't parse model response");
+    return arr;
+  }
+}
+
+// "37s" from the RetryInfo detail Google attaches to a 429; null if it didn't say.
+function retryDelayMs(body) {
+  const d = (body?.error?.details || []).find((x) => String(x["@type"] || "").endsWith("RetryInfo"))?.retryDelay;
+  const s = parseFloat(String(d || ""));
+  return Number.isFinite(s) ? s * 1000 : null;
+}
+function quotaWontClear(body) {
+  const msg = String(body?.error?.message || "");
+  const ids = (body?.error?.details || []).flatMap((x) => x.violations || []).map((v) => v.quotaId || "").join(" ");
+  return /limit: 0\b/.test(msg) || /PerDay/i.test(ids + " " + msg);
+}
+function quotaMessage(body, model) {
+  const msg = String(body?.error?.message || "");
+  if (/limit: 0\b/.test(msg))
+    return `QUOTA_ZERO: Your Gemini key has no quota for ${model} (Google reports "limit: 0"), so every request is rejected before it runs — that's why your dashboard shows no requests. Pick a model your key's free tier includes in Settings (e.g. gemini-2.5-flash-lite), or turn on billing for the key's Google Cloud project.`;
+  if (/PerDay/i.test(msg + JSON.stringify(body?.error?.details || [])))
+    return `QUOTA_DAY: Gemini's daily quota for ${model} on your key is used up. It resets at midnight Pacific; turn on billing for the key's project for higher limits.`;
+  return `QUOTA: Gemini is rate-limiting your key (${msg || "HTTP 429"}). Try again in a minute.`;
+}
+
+function postGemini(url, prompt, apiKey, model, search) {
+  return fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
     body: JSON.stringify({
@@ -1001,17 +1048,6 @@ async function callGemini(prompt, apiKey, model, { search = true, refinement = f
       },
     }),
   });
-
-  const body = await res.json().catch(() => ({}));
-  // a grounded prompt is billed when the model actually ran a search
-  const searched = !!body.candidates?.[0]?.groundingMetadata?.webSearchQueries?.length;
-  await recordUsage(body, searched);
-  if (!res.ok) throw new Error(body?.error?.message || `Gemini HTTP ${res.status}`);
-
-  const text = (body.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
-  const arr = parseJsonArray(text);
-  if (!arr) throw new Error("Couldn't parse model response");
-  return arr;
 }
 
 // ---------- Education: school + program prestige ----------

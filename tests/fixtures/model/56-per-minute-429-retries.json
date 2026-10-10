@@ -1,0 +1,10 @@
+{
+  "name": "per-minute 429, then success",
+  "why": "Wait what Google asks and retry instead of failing the lookup",
+  "entries": [{ "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States" }],
+  "gemini": { "lookup": [
+    { "status": 429, "error": "Resource has been exhausted (e.g. check quota).", "details": [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "0s" }] },
+    [{ "$base": "intern", "pay_amount": 50, "pay_period": "hour" }]
+  ] },
+  "expect": { "response": { "ok": true }, "results": { "0": { "pay_hourly": 50 } }, "calls": { "lookup": 2 } }
+}

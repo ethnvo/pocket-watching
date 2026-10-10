@@ -1,0 +1,7 @@
+{
+  "name": "429 with \"limit: 0\": the key has no quota for this model",
+  "why": "Don't retry a quota that will never clear; say why instead of a bare rate-limit error",
+  "entries": [{ "text": "Software Engineer Intern\nAcme Robotics · Internship\nJun 2025 - Sep 2025 · 4 mos\nSan Jose, California, United States" }],
+  "gemini": { "lookup": [{ "status": 429, "error": "You exceeded your current quota. Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.5-flash", "details": [{ "@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "0s" }] }] },
+  "expect": { "response": { "ok": false, "error": { "$match": "^QUOTA_ZERO:" } }, "calls": { "lookup": 1 } }
+}

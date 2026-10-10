@@ -180,7 +180,8 @@
     send({ type: "pw:lookup", kind: e.kind, entries: [entry], profile }, (resp) => {
       pending.delete(e.key);
       const err = chrome.runtime.lastError?.message || (!resp?.ok && (resp?.error || "Unknown error"));
-      if (err === "NO_KEY" || err === "DAILY_LIMIT") lastError = err;
+      // these hit every entry alike, so show them once for all instead of retrying each
+      if (err === "NO_KEY" || err === "DAILY_LIMIT" || /^QUOTA_(ZERO|DAY):/.test(err || "")) lastError = err;
       else if (err) errors.set(e.key, err);
       else if (resp.results[e.key]) results.set(e.key, resp.results[e.key]);
       else errors.set(e.key, "No result for this entry");
@@ -453,12 +454,15 @@
     row.dataset.sig = "err";
     const noKey = err === "NO_KEY";
     const limit = err === "DAILY_LIMIT";
+    const quota = /^QUOTA(_ZERO|_DAY)?:/.test(err);
+    const quotaFixInSettings = /^QUOTA_(ZERO|DAY):/.test(err);
     const tip = limit
       ? "Pocket Watching paused new lookups for today to keep Gemini costs down. Saved results still show. Raise the limit in Settings → Data, or check back tomorrow."
-      : err;
+      : quota ? err.replace(/^QUOTA\w*:\s*/, "") : err;
+    const label = noKey ? "add Gemini key" : quota ? (quotaFixInSettings ? "Gemini quota — see why" : "Gemini busy — retry") : "lookup failed — retry";
     row.innerHTML = limit
       ? `<span class="pw-chip pw-wait" data-tip="${esc(tip)}">⌚ daily limit reached</span><span class="pw-chip pw-more" data-act="more" data-tip="Raise today's limit by 500 web searches and 1,000 lookups, then keep going. Past 1,500 searches a day, each costs about $0.035.">allow 500 more</span>`
-      : `<span class="pw-chip pw-err" data-tip="${esc(tip)}">⌚ ${noKey ? "add Gemini key" : "lookup failed — retry"}</span>`;
+      : `<span class="pw-chip pw-err" data-tip="${esc(tip)}">⌚ ${label}</span>`;
     const more = row.querySelector('[data-act="more"]');
     if (more)
       more.onclick = (ev) => {
@@ -472,7 +476,7 @@
     row.firstChild.onclick = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      if (noKey || limit) send({ type: "pw:options" });
+      if (noKey || limit || quotaFixInSettings) send({ type: "pw:options" });
       else {
         errors.delete(e.key);
         scheduleScan();

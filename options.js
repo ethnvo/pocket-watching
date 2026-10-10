@@ -75,12 +75,21 @@ $("testKey").onclick = async () => {
   $("testKey").disabled = true;
   flash($("keyStatus"), "Testing…", "", 0);
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}`, {
-      headers: { "x-goog-api-key": key },
+    // A real (tiny) generation, not just a model lookup: the lookup succeeds even when
+    // the key has no quota for the model, which is exactly the case worth catching here.
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: "Reply with OK." }] }], generationConfig: { maxOutputTokens: 5 } }),
     });
     const body = await res.json().catch(() => ({}));
-    if (res.ok) flash($("keyStatus"), `Key works with ${body.displayName || model}.`);
-    else flash($("keyStatus"), body?.error?.message || `Gemini returned ${res.status}.`, "err", 6000);
+    const msg = body?.error?.message || "";
+    if (res.ok) flash($("keyStatus"), `Key works with ${model}.`);
+    else if (res.status === 429 && /limit: 0\b/.test(msg))
+      flash($("keyStatus"), `This key has no quota for ${model} ("limit: 0"). Try gemini-2.5-flash-lite, or turn on billing for the key's Google Cloud project.`, "err", 12000);
+    else if (res.status === 429)
+      flash($("keyStatus"), `The key is valid but Gemini is rate-limiting it: ${msg || "HTTP 429"}`, "err", 12000);
+    else flash($("keyStatus"), msg || `Gemini returned ${res.status}.`, "err", 6000);
   } catch {
     flash($("keyStatus"), "Couldn't reach Gemini. Check your connection.", "err", 6000);
   } finally {
