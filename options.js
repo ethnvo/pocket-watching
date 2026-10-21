@@ -375,7 +375,7 @@ const BADGES = [
   ["category", "Company type", "MANGO, FAANG, Quant, Startup, Fintech and so on"],
   ["tiers", "Compliments", "THANOS, S and A tier on standout jobs and schools"],
   ["larp", "LARP flag", "Wildly inflated titles, like Member of Technical Staff at a school club"],
-  ["school", "School label", "Top 5 CS, Ivy, UC and similar"],
+  ["school", "School label", "Top 5 CS, Top 10 Bio, Ivy, UC and similar, rated for the person's major"],
   ["tenure", "Time in school", "Early grad, super senior and beyond"],
 ];
 chrome.storage.sync.get("badges", ({ badges = {} }) => {

@@ -412,7 +412,8 @@
       // Blue check = confirmed by you (Known pay). Everything found online is an estimate.
       const confirmed = r.pay_scope === "reported";
       const community = r.pay_scope === "community";
-      const scope = confirmed ? "" : ` <span class="pw-dim">${{ market: "est. mkt", median: "median", edited: "edited", community: "community" }[r.pay_scope] || "approx."}</span>`;
+      // The community check says it on its own; only spell it out when checks are off.
+      const scope = confirmed || (community && badges.verified) ? "" : ` <span class="pw-dim">${{ market: "est. mkt", median: "median", edited: "edited", community: "community" }[r.pay_scope] || "approx."}</span>`;
       const check = !badges.verified ? "" : confirmed ? verifiedCheck(`Confirmed · ${r.pay_source}`) : community ? communityCheck(r.pay_source) : "";
       const what =
         kind === "full-time"

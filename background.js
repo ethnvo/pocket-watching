@@ -341,7 +341,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   const all = await chrome.storage.local.get(null);
   const monthAgo = new Date(Date.now() - 30 * 864e5).toLocaleDateString("en-CA");
   const stale = Object.keys(all).filter(
-    (k) => (/^v\d+:/.test(k) && !k.startsWith(JOB_CACHE)) || /^(entry|cache|school1|co|co2|pay|pay2):/.test(k) ||
+    (k) => (/^v\d+:/.test(k) && !k.startsWith(JOB_CACHE)) || /^(entry|cache|school1|school2|co|co2|pay|pay2):/.test(k) ||
       (k.startsWith("usage:") && k.slice(6) < monthAgo)
   );
   if (stale.length) await chrome.storage.local.remove(stale);
@@ -1058,10 +1058,10 @@ function postGemini(url, prompt, apiKey, model, search) {
 
 async function lookupEdu(entries) {
   const results = {};
-  const cached = await chrome.storage.local.get(entries.map((e) => `school2:${e.key}`));
+  const cached = await chrome.storage.local.get(entries.map((e) => `school3:${e.key}`));
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`school2:${e.key}`];
+    const hit = cached[`school3:${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
@@ -1071,17 +1071,17 @@ async function lookupEdu(entries) {
   if (!apiKey) throw new Error("NO_KEY");
 
   const list = misses.map((e, i) => `#${i}\n${e.text}`).join("\n\n");
-  const prompt = `Rate each education entry (scraped from a LinkedIn Education section) for prestige in tech recruiting. BOTH the school and the specific program/major matter — rate the program, not just the logo. Answer from your own knowledge; only search for schools you don't know.
+  const prompt = `Rate each education entry (scraped from a LinkedIn Education section) for the prestige of that specific program IN ITS OWN FIELD. Not everyone is CS: a biology major is rated by how strong that school is for biology, an econ major by its economics program, a nursing major by its nursing program, and so on. BOTH the school and the major matter — rate the program, not just the logo, and never rate a non-CS major by the school's CS ranking. If no major is listed, rate the school overall. Answer from your own knowledge; only search for schools you don't know.
 
-TIERS:
-  THANOS = the absolute peak for CS: MIT (EECS/CS), Stanford (CS), Carnegie Mellon (SCS / CS).
-  S = elite: UC Berkeley EECS or CS, Caltech, Princeton, Harvard, Cornell, UIUC CS, UW (Allen School) CS, Waterloo CS/SE/CE, Georgia Tech CS, Oxford/Cambridge CS, ETH Zurich.
-  A = strong: other top-25 CS programs (e.g. UCLA, UCSD, Michigan, UT Austin, Columbia, Penn, Purdue, Maryland, USC, Wisconsin), or an elite school with a non-CS STEM major.
-  B = good: solid top-50 CS programs and strong state flagships, or an elite school with a non-STEM major.
+TIERS (for the entry's own field):
+  THANOS = the absolute peak of the field, about the top 3 programs in the world for it (e.g. CS: MIT, Stanford, Carnegie Mellon; biology: MIT, Harvard, Stanford; economics: MIT, Harvard, Stanford; finance/business: Wharton, Stanford, MIT Sloan).
+  S = elite: about the top 10 programs in the field, or an Ivy / MIT / Stanford / Caltech-level school in a field it's strong in.
+  A = strong: about the top 25 programs in the field, or an elite school with a major it isn't known for.
+  B = good: about the top 50 programs in the field and strong state flagships.
   MID = decent: regional/state universities and less competitive programs.
   C = lesser-known colleges, community colleges, bootcamps.
   D = unaccredited programs, certificate mills.
-  Grad programs: rate the grad program itself — a low-selectivity, cash-cow master's is about one tier below that school's undergrad CS. PhDs at top programs rank at the top of their school's tier.
+  Grad programs: rate the grad program itself — a low-selectivity, cash-cow master's is about one tier below that school's undergrad program in the same field. PhDs at top programs rank at the top of their school's tier.
   High school, certificates, courses, and anything that isn't a college degree → tier null.
 
 Respond with ONLY a JSON array (no markdown fences), one object per entry, same order:
@@ -1091,7 +1091,7 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, same 
   "program": string | null,     // major/degree as listed
   "level": "undergrad" | "community college" | "grad" | "phd" | "high school" | "bootcamp" | "other",
   "tier": "THANOS" | "S" | "A" | "B" | "MID" | "C" | "D" | null,
-  "label": string | null,       // very short, e.g. "Top 5 CS", "Top 20 CS", "Ivy", "UC", "Community college", "Bootcamp"
+  "label": string | null,       // very short, names the field, e.g. "Top 5 CS", "Top 10 Bio", "Top 20 Econ", "Ivy", "UC", "Community college", "Bootcamp"
   "tier_reason": string         // one short sentence
 }]
 
@@ -1104,7 +1104,7 @@ ${list}`;
     const e = misses[item?.i];
     if (!e) continue;
     results[e.key] = item;
-    toStore[`school2:${e.key}`] = { at: Date.now(), data: item };
+    toStore[`school3:${e.key}`] = { at: Date.now(), data: item };
   }
   await chrome.storage.local.set(toStore);
   return results;

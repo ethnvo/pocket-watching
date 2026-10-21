@@ -42,6 +42,10 @@ for (const scope of SCOPES) {
           const dims = [...chip.querySelectorAll(".pw-dim")].map((d) => d.textContent.trim());
           if (scope === "reported") {
             if (badges.verified !== false && !chip.querySelector(".pw-check")) problems.push(`${at} confirmed pay without a check`);
+          } else if (scope === "community" && badges.verified !== false) {
+            // the community check stands in for the word
+            if (!chip.querySelector(".pw-check-community")) problems.push(`${at} community pay without its check`);
+            if (dims.includes("community")) problems.push(`${at} "community" spelled out next to its check`);
           } else if (!dims.includes(SCOPE_LABEL[scope])) problems.push(`${at} expected "${SCOPE_LABEL[scope]}", got ${JSON.stringify(dims)}`);
           if (payName === "full-time" && !/TC/.test(chip.textContent)) problems.push(`${at} full-time without TC`);
           if (payName === "intern monthly" && !/\/mo/.test(chip.textContent)) problems.push(`${at} monthly without /mo`);

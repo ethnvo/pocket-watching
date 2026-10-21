@@ -22,7 +22,7 @@ Open any LinkedIn profile (or its full Experience / Education page) and badges a
 - **Unpaid / unverified.** Clubs, volunteering and personal projects read "unpaid". Companies that can't be found online read "unverified".
 
 **Schools**
-- A compliment tier for standout programs (school *and* major matter) plus a short label like "Top 5 CS".
+- A compliment tier for standout programs plus a short label like "Top 5 CS" or "Top 10 Bio". School *and* major matter: each program is rated in its own field, so a biology major is rated by the school's biology program, not its CS one.
 - How long undergrad took, community college included: early grad, on time, super senior, SUPER DUPER SENIOR.
 
 **Confirmed vs. estimated pay**
