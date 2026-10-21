@@ -2,7 +2,7 @@
 
 ## Add your pay to community pay
 
-Community pay is a list of real offers in [`community-pay.json`](community-pay.json). Everyone running Pocket Watching gets it (it refreshes about once a day), and it shows up with an outlined check and a "community" tag. It's the closest thing this project has to a database of verified internships: every entry is a pull request someone reviewed.
+Community pay is a list of real offers in [`community-pay.json`](community-pay.json). Everyone running Pocket Watching gets it (it refreshes about once a day), and it shows up with an outlined check. It's the closest thing this project has to a database of verified internships: every entry is a pull request someone reviewed.
 
 **Rules**
 - Only real offers: yours, or someone's who said it's okay.
