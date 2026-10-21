@@ -58,3 +58,20 @@ for (const scope of SCOPES) {
     });
   }
 }
+
+// Below A tier nothing ranks a person: no tier chip, and no school label that reads as a knock.
+test("lower tiers and put-down school labels never render", () => {
+  const edu = { key: "s", kind: "edu", text: "Some College\nBachelor of Science - BS, Biology\n2021 - 2025" };
+  const problems = [];
+  const cases = [
+    ["C", "Top 200 Bio", false], ["D", "Lesser-known college", false], ["MID", "Unranked", false], ["B", "Low-tier state school", false],
+    ["B", "Top 50 Bio", true], ["C", "Community college", true], ["MID", "UC", true], ["S", "Top 10 Bio", true],
+  ];
+  for (const [tier, label, shown] of cases) {
+    const row = renderRow(edu, { tier, label, level: "undergrad", school: "Some College" });
+    const text = row?.textContent || "";
+    if (/\b(B|Mid|C|D) tier\b/.test(text)) problems.push(`${tier}: tier chip shown: ${text}`);
+    if (text.includes(label) !== shown) problems.push(`${tier} "${label}": expected ${shown ? "shown" : "hidden"}, got ${JSON.stringify(text)}`);
+  }
+  assert.deepEqual(problems, []);
+});

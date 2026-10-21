@@ -537,11 +537,18 @@
     return `<span class="pw-check" data-tip="${esc(tip)}"><svg viewBox="0 0 16 16" width="13" height="13" aria-label="verified"><circle cx="8" cy="8" r="8" fill="#1d9bf0"/><path d="M4.5 8.2l2.3 2.3 4.7-4.9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`;
   }
 
+  // School labels show at every tier, so they must never read as a knock: no "Top 200",
+  // no "lesser-known". Below the top 50, a label is either neutral ("UC") or gone.
+  function putsDown(label) {
+    const top = String(label).match(/\btop\s*(\d+)/i);
+    return (top && +top[1] > 50) || /\b(low|lower|lesser|less|un-?ranked|unaccredited|weak|bottom|mediocre|average|mid|obscure|unknown|no-name|diploma mill)\b/i.test(label);
+  }
+
   function eduChips(r) {
     const tier = String(r.tier || "").toUpperCase();
     if (!TIER_LABELS[tier]) return ""; // high school, certificates, etc.
     const chips = badges.tiers && SHOWN_TIERS.has(tier) ? [`<span class="pw-chip pw-tier pw-t-${tier}" data-tip="${esc(tierTip(tier, r.tier_reason))}">${TIER_LABELS[tier]}</span>`] : [];
-    if (badges.school && r.label) chips.push(`<span class="pw-chip pw-cat pw-c-school"><span class="pw-ico">🎓</span>${esc(r.label)}</span>`);
+    if (badges.school && r.label && !putsDown(r.label)) chips.push(`<span class="pw-chip pw-cat pw-c-school"><span class="pw-ico">🎓</span>${esc(r.label)}</span>`);
     return chips.join("");
   }
 

@@ -341,7 +341,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   const all = await chrome.storage.local.get(null);
   const monthAgo = new Date(Date.now() - 30 * 864e5).toLocaleDateString("en-CA");
   const stale = Object.keys(all).filter(
-    (k) => (/^v\d+:/.test(k) && !k.startsWith(JOB_CACHE)) || /^(entry|cache|school1|school2|co|co2|pay|pay2):/.test(k) ||
+    (k) => (/^v\d+:/.test(k) && !k.startsWith(JOB_CACHE)) || /^(entry|cache|school1|school2|school3|co|co2|pay|pay2):/.test(k) ||
       (k.startsWith("usage:") && k.slice(6) < monthAgo)
   );
   if (stale.length) await chrome.storage.local.remove(stale);
@@ -1058,10 +1058,10 @@ function postGemini(url, prompt, apiKey, model, search) {
 
 async function lookupEdu(entries) {
   const results = {};
-  const cached = await chrome.storage.local.get(entries.map((e) => `school3:${e.key}`));
+  const cached = await chrome.storage.local.get(entries.map((e) => `school4:${e.key}`));
   const misses = [];
   for (const e of entries) {
-    const hit = cached[`school3:${e.key}`];
+    const hit = cached[`school4:${e.key}`];
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) results[e.key] = hit.data;
     else misses.push(e);
   }
@@ -1091,7 +1091,7 @@ Respond with ONLY a JSON array (no markdown fences), one object per entry, same 
   "program": string | null,     // major/degree as listed
   "level": "undergrad" | "community college" | "grad" | "phd" | "high school" | "bootcamp" | "other",
   "tier": "THANOS" | "S" | "A" | "B" | "MID" | "C" | "D" | null,
-  "label": string | null,       // very short, names the field, e.g. "Top 5 CS", "Top 10 Bio", "Top 20 Econ", "Ivy", "UC", "Community college", "Bootcamp"
+  "label": string | null,       // very short, names the field, e.g. "Top 5 CS", "Top 10 Bio", "Top 20 Econ", "Ivy", "UC", "Community college", "Bootcamp". Shown at every tier, so it must never put the person down: no "Top N" past 50, no "lesser-known", "unranked", "low-tier" or similar. If nothing neutral or positive fits, null.
   "tier_reason": string         // one short sentence
 }]
 
@@ -1104,7 +1104,7 @@ ${list}`;
     const e = misses[item?.i];
     if (!e) continue;
     results[e.key] = item;
-    toStore[`school3:${e.key}`] = { at: Date.now(), data: item };
+    toStore[`school4:${e.key}`] = { at: Date.now(), data: item };
   }
   await chrome.storage.local.set(toStore);
   return results;
