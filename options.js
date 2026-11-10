@@ -260,7 +260,9 @@ function renderImport(name, jobs, known) {
 
 // ---------- estimates: browse, correct, confirm, delete ----------
 const JOB_CACHE = "v27:"; // keep in sync with background.js
-const CATEGORY_OPTIONS = ["MANGO", "FAANG", "FAANG-adjacent", "FAANG-lite", "AI Lab", "Quant", "Hedge Fund", "Fintech", "Big Tech", "Unicorn", "Startup", "Bank", "Consulting", "Defense", "Public co", "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed"];
+// FAANG-lite was folded into FAANG-adjacent; older saved results may still carry it.
+const catName = (c) => (c === "FAANG-lite" ? "FAANG-adjacent" : c);
+const CATEGORY_OPTIONS = ["MANGO", "FAANG", "FAANG-adjacent", "AI Lab", "Quant", "Hedge Fund", "Fintech", "Big Tech", "Unicorn", "Startup", "Bank", "Consulting", "Defense", "Public co", "Private co", "University", "Government", "Nonprofit", "Student org", "Volunteer", "Self-employed"];
 
 function estPay(d) {
   if (d.unpaid) return "Unpaid";
@@ -287,7 +289,7 @@ async function renderEstimates() {
       return `<div class="row" data-key="${esc(r.key)}">
         <span><b>${esc(r.h.company || r.d.company || "Unknown")}</b><span class="role" style="display:block">${esc(r.h.title || r.d.role || "")}</span>
           <span class="who">${esc(r.h.location || r.d.location || "")}${r.who ? ` · from ${esc(r.who)}` : ""}</span></span>
-        <span class="pay">${esc(estPay(r.d))}<span class="tags"><span class="tag${scope === "edited" ? " edited" : ""}">${SCOPE_LABEL[scope] || "approx."}</span>${r.d.category ? `<span class="tag">${esc(r.d.category)}</span>` : ""}</span></span>
+        <span class="pay">${esc(estPay(r.d))}<span class="tags"><span class="tag${scope === "edited" ? " edited" : ""}">${SCOPE_LABEL[scope] || "approx."}</span>${r.d.category ? `<span class="tag">${esc(catName(r.d.category))}</span>` : ""}</span></span>
         <span class="who">${new Date(r.at).toLocaleDateString()}</span>
         <span class="row-actions">
           <button type="button" data-act="edit">Edit</button>
@@ -308,7 +310,7 @@ function editRowHtml(d) {
     <div class="field money"><label>Pay</label><input data-f="amount" inputmode="decimal" value="${esc(amount ?? "")}"></div>
     <div class="field"><label>Per</label><select data-f="unit">${opt("hr", "hour", unit)}${opt("mo", "month", unit)}${opt("yr", ft ? "year · TC" : "year", unit)}</select></div>
     <div class="field money"><label>Housing/mo</label><input data-f="housing" inputmode="decimal" value="${esc(d.housing_period === "month" ? d.housing_amount ?? "" : "")}"></div>
-    <div class="field"><label>Company type</label><select data-f="category">${CATEGORY_OPTIONS.map((c) => opt(c, c, d.category)).join("")}</select></div>
+    <div class="field"><label>Company type</label><select data-f="category">${CATEGORY_OPTIONS.map((c) => opt(c, c, catName(d.category))).join("")}</select></div>
     <div class="field"><label>Level</label><input data-f="level" value="${esc(d.level || "")}" placeholder="${ft ? "E3, L3…" : "—"}"></div>
     <div class="btns"><button type="button" class="ghost" data-act="cancel">Cancel</button><button type="button" class="primary" data-act="save">Save</button></div>
   </div>`;

@@ -207,8 +207,7 @@ const ORDINARY_TITLE = /\b(president|vice president|vp|treasurer|secretary|offic
 const CATEGORY_BY_NAME = [
   ["MANGO", /^(meta|facebook|instagram|whatsapp|anthropic|nvidia|google|alphabet|deepmind|google deepmind|youtube|openai)\b/],
   ["FAANG", /^(apple|amazon|aws|amazon web services|netflix)\b/],
-  ["FAANG-adjacent", /^(spacex|space exploration technologies|tesla|microsoft|uber|doordash|linkedin)\b/],
-  ["FAANG-lite", /^(capital one|airbnb|lyft|snap|snapchat|pinterest|coinbase|robinhood|databricks|snowflake|palantir|roblox|figma|discord|scale ai|stripe|instacart|reddit|dropbox|netflix games)\b/],
+  ["FAANG-adjacent", /^(spacex|space exploration technologies|tesla|microsoft|uber|doordash|linkedin|capital one|airbnb|lyft|snap|snapchat|pinterest|coinbase|robinhood|databricks|snowflake|palantir|roblox|figma|discord|scale ai|stripe|instacart|reddit|dropbox|netflix games)\b/],
   ["Quant", /^(jane street|citadel securities|hudson river trading|hrt|jump trading|optiver|imc trading|imc|susquehanna|sig|five rings|tower research|drw|radix|virtu|akuna)\b/],
   ["Hedge Fund", /^(citadel|two sigma|d ?e shaw|bridgewater|millennium|point72|renaissance technologies)\b/],
 ];
@@ -621,8 +620,7 @@ D) VERIFICATION — verified=true if the company is well known or you confirmed 
 E) CATEGORY — pick exactly one:
   "MANGO" = Meta (incl. Facebook, Instagram, WhatsApp), Anthropic, Nvidia, Google/Alphabet (incl. DeepMind, YouTube), OpenAI — the newer tier above FAANG.
   "FAANG" = Apple, Amazon (incl. AWS, Amazon Music, etc.), Netflix. (Meta and Google are MANGO.)
-  "FAANG-adjacent" = peers right next to FAANG: SpaceX, Tesla, Microsoft, Uber, DoorDash, LinkedIn.
-  "FAANG-lite" = strong, well-paying companies a step below: Capital One, Airbnb, Lyft, Snap, Pinterest, Coinbase, Robinhood, Databricks, Snowflake, Palantir, Roblox, Figma, Discord, Scale AI, Stripe, Instacart, Reddit, Dropbox, etc.
+  "FAANG-adjacent" = top tech companies right alongside FAANG: SpaceX, Tesla, Microsoft, Uber, DoorDash, LinkedIn, Capital One, Airbnb, Lyft, Snap, Pinterest, Coinbase, Robinhood, Databricks, Snowflake, Palantir, Roblox, Figma, Discord, Scale AI, Stripe, Instacart, Reddit, Dropbox, etc.
   "AI Lab" = frontier AI labs other than MANGO: xAI, Mistral, Safe Superintelligence, Thinking Machines, Reflection, etc.
   "Quant" = quant trading / HFT / prop / market makers: Jane Street, Citadel Securities, HRT, Jump, Optiver, IMC, SIG, Five Rings, Tower, DRW.
   "Hedge Fund" = hedge funds & multi-managers: Citadel, Two Sigma, DE Shaw, Bridgewater, Millennium, Point72, Renaissance.

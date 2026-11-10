@@ -75,3 +75,11 @@ test("lower tiers and put-down school labels never render", () => {
   }
   assert.deepEqual(problems, []);
 });
+
+// FAANG-lite was retired (it read as a put-down); older cached results show as FAANG-adjacent.
+test("retired FAANG-lite renders as FAANG-adjacent", () => {
+  const row = renderRow(entry, { category: "FAANG-lite", company: "Stripe", tier: "A" });
+  const chip = row.querySelector(".pw-cat");
+  assert.equal(chip?.textContent.trim(), "☆FAANG-adjacent");
+  assert.ok(!/lite|below|fell off/i.test(row.innerHTML));
+});

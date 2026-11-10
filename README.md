@@ -16,7 +16,7 @@ Open any LinkedIn profile (or its full Experience / Education page) and badges a
 
 **Jobs**
 - **Pay.** Internships and part-time roles show hourly pay, or a monthly salary when that's how it's quoted (`$10,200/mo ≈$58.85/hr`). Housing stipends are shown alongside. Full-time roles show yearly total compensation at the new-grad level unless the title says otherwise (`$195K TC E3`).
-- **Company type.** MANGO, FAANG, FAANG-adjacent, FAANG-lite, Quant, Hedge Fund, AI Lab, Fintech, Big Tech, Unicorn, Startup (with its funding round when known), Y Combinator batch, University position, Student org and so on.
+- **Company type.** MANGO, FAANG, FAANG-adjacent, Quant, Hedge Fund, AI Lab, Fintech, Big Tech, Unicorn, Startup (with its funding round when known), Y Combinator batch, University position, Student org and so on.
 - **Compliments.** THANOS, S and A tier appear only on standout roles (top quant firms, MANGO, FAANG and similar). Lower tiers are never shown.
 - **LARP.** Flags wildly inflated titles, like "Member of Technical Staff" at a school club or "CEO" of an app with no users. Ordinary club roles and titles never get it.
 - **Unpaid / unverified.** Clubs, volunteering and personal projects read "unpaid". Companies that can't be found online read "unverified".

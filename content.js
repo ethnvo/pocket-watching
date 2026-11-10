@@ -611,9 +611,8 @@
 
   const CATEGORY_TIPS = {
     MANGO: "MANGO = Meta, Anthropic, Nvidia, Google, OpenAI. The newer, AI-era answer to FAANG, and a tier above it.",
-    FAANG: "FAANG = Facebook (Meta), Apple, Amazon, Netflix, Google. The staple of the bootcamp era and the peak back then, but lowkey fell off. Meta and Google moved up to MANGO.",
-    "FAANG-adjacent": "Right next to FAANG: SpaceX, Tesla, Microsoft, Uber, DoorDash, LinkedIn.",
-    "FAANG-lite": "Strong, well-paying tech a step below FAANG: Capital One, Airbnb, Stripe, Snowflake, Databricks and similar.",
+    FAANG: "FAANG = Facebook (Meta), Apple, Amazon, Netflix, Google. The classic big-tech gold standard. Meta and Google are badged MANGO here.",
+    "FAANG-adjacent": "Top tech right alongside FAANG: SpaceX, Tesla, Microsoft, Stripe, Databricks, Airbnb and similar.",
     Quant: "Quant trading / HFT / market making.",
     "AI Lab": "A frontier AI lab.",
     Unicorn: "A private startup valued at $1B+.",
@@ -624,7 +623,6 @@
     "FAANG": { cls: "faang", icon: "★" },
     "FAANG-adjacent": { cls: "faangadj", icon: "☆" },
     "FAANG+": { cls: "faangadj", icon: "☆" },
-    "FAANG-lite": { cls: "faanglite", icon: "" },
     "AI Lab": { cls: "ailab", icon: "✦" },
     "Quant": { cls: "quant", icon: "∑" },
     "Hedge Fund": { cls: "hedge", icon: "◆" },
@@ -641,8 +639,9 @@
   };
 
   function categoryChip(r) {
-    const name = r.category || r.company_type;
-    if (!name) return "";
+    const raw = r.category || r.company_type;
+    if (!raw) return "";
+    const name = raw === "FAANG-lite" ? "FAANG-adjacent" : raw; // retired label, still in older cached results
     const c = CATEGORIES[name] || { cls: "plain", icon: "" };
     // Funding round only means something for regular startups; a unicorn is just $1B+.
     const label = name === "Startup" && r.stage ? `${r.stage} startup` : name === "University" ? "University position" : name;

@@ -10,6 +10,7 @@ Pocket Watching is a cracked meter: it shows how good someone is at what they do
   - No indirect put-downs either. Labels and tooltips are neutral or positive: no "Top 200", "lesser-known", "unranked", "low-tier". A school label past the top 50 is either neutral ("UC", "Community college") or absent (`putsDown()` in `content.js`).
   - No badge at all is the default. Most entries get nothing, and that's never a statement about the person.
   - LARP is the one negative flag, and only for wildly inflated titles, never for ordinary ones.
+- **Hype up, never belittle.** This covers companies, schools and categories too, not just people. Hyping something ("the AI-era answer to FAANG") is fine. Putting something down to do it is not: no "lowkey fell off", "lost its credibility", "a step below", "-lite". Name categories by what they are next to, not what they fall short of (FAANG-adjacent, not FAANG-lite).
 
 ## How we show it
 - **One mark, one meaning.** If a badge or check already says something, don't repeat it in text. The blue check means confirmed by you; the outlined check means community-reported. The word only appears when checks are turned off.
@@ -17,6 +18,6 @@ Pocket Watching is a cracked meter: it shows how good someone is at what they do
 - **Keep badges short.** Detail goes in the tooltip.
 
 ## Working on the code
-- After changing a Gemini prompt, bump its cache key (`JOB_CACHE`, `pay3:`, `school3:`…) so old answers re-run, and add the old prefix to the stale-key cleanup in `background.js`.
+- After changing a Gemini prompt in a way that makes old answers wrong, bump its cache key (`JOB_CACHE`, `pay3:`, `school4:`…) so they re-run, and add the old prefix to the stale-key cleanup in `background.js`. A plain rename can be aliased where it's displayed instead (see `FAANG-lite`).
 - Keep README, CONTRIBUTING and the Settings descriptions in sync with behavior.
 - Run `npm test` before pushing.

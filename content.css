@@ -81,7 +81,6 @@ html.pw-dark .pw-yc { background: #3a2216; color: #ffb38a; }
   -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 800; letter-spacing: .4px;
 }
 .pw-c-faangadj { background: #fdf0ee; color: #b3261e; box-shadow: 0 0 0 1px #f3c7c2 inset; font-weight: 600; }
-.pw-c-faanglite { background: transparent; color: #b3261e; box-shadow: 0 0 0 1px #f3c7c2 inset; font-weight: 600; }
 .pw-c-ailab { background: linear-gradient(135deg, #0fb5ae, #7b61ff); color: #fff; }
 .pw-c-quant { background: #0b0f0c; color: #39ff88; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; box-shadow: 0 0 0 1px #1f7a45 inset, 0 0 8px rgba(57, 255, 136, .35); }
 .pw-c-hedge { background: linear-gradient(135deg, #0d1b3d, #1c2f63); color: #f2c94c; box-shadow: 0 0 0 1px #b8923a inset; }
@@ -113,7 +112,6 @@ html.pw-dark .pw-t-C { background: #3a3326; color: #e2cf9f; }
 html.pw-dark .pw-t-D { background: #333; color: #aaa; }
 html.pw-dark .pw-unpaid { background: #3a3526; color: #d9c98f; }
 html.pw-dark .pw-unverified { background: transparent; color: #e0c66a; box-shadow: 0 0 0 1px #6b5a1f inset; }
-html.pw-dark .pw-c-faanglite { background: transparent; color: #f2a39b; box-shadow: 0 0 0 1px #5a2a26 inset; }
 html.pw-dark .pw-c-bigtech { background: #1f2c40; color: #a9c3ec; }
 html.pw-dark .pw-c-startup { background: transparent; color: #ff9a5c; box-shadow: 0 0 0 1px #7a3d18 inset; }
 html.pw-dark .pw-c-consulting { background: #1c3325; color: #9fdab4; }
