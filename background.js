@@ -343,6 +343,13 @@ chrome.runtime.onInstalled.addListener(async () => {
     (k) => (/^v\d+:/.test(k) && !k.startsWith(JOB_CACHE)) || /^(entry|cache|school1|school2|school3|co|co2|pay|pay2):/.test(k) ||
       (k.startsWith("usage:") && k.slice(6) < monthAgo)
   );
+  // Once: LARP reasons written before the playful-tone prompt get looked up again.
+  // Entries you corrected in Settings keep your edit.
+  if (!all["migrated:larpTone"]) {
+    for (const [k, v] of Object.entries(all))
+      if (k.startsWith(JOB_CACHE) && v?.data?.larp && v.data.pay_scope !== "edited") stale.push(k);
+    await chrome.storage.local.set({ "migrated:larpTone": true });
+  }
   if (stale.length) await chrome.storage.local.remove(stale);
 });
 

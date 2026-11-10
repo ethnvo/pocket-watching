@@ -42,3 +42,16 @@ test("Settings → Estimates reads the same cache version as the background", as
   const version = (f) => read(f).match(/const JOB_CACHE = "(v\d+:)"/)[1];
   assert.equal(version("options.js"), version("background.js"));
 });
+
+test("updating once re-runs LARP entries for the new tone, keeping edits and everything else", async () => {
+  const larp = (extra = {}) => ({ at: Date.now(), data: { larp: true, larp_reason: "Lol, no.", pay_scope: "company", ...extra } });
+  const w = createWorld({ local: { "v27:a": larp(), "v27:b": larp({ pay_scope: "edited" }), "v27:c": { at: Date.now(), data: { larp: false } } } });
+  w.loadBackground();
+  await w.bg.installed();
+  assert.deepEqual(Object.keys(w.local).filter((k) => k.startsWith("v27:")).sort(), ["v27:b", "v27:c"]);
+  // a later update leaves the freshly re-run LARP entries alone
+  w.local["v27:a"] = larp({ larp_reason: "A big-lab title for a campus club." });
+  await w.bg.installed();
+  assert.ok(w.local["v27:a"]);
+  w.dispose();
+});
