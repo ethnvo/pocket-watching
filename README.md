@@ -8,7 +8,7 @@ A Chrome extension that adds a little context under the career moves on a Linked
 
 It's for curiosity about tech careers (internships, new-grad and early-career jobs), mostly your own and your friends'. It isn't a background check.
 
-> **Heads up:** this was made as a joke, and for pay transparency. Don't use it to spread hate or demean anyone. Everyone's path is different, and a badge on a LinkedIn page says nothing about a person's worth.
+> **Heads up:** this is for fun and for pay transparency. It's a cracked meter that hypes standout moves, not a way to demean anyone or make people feel bad about their life choices. Everyone's path is different, and a badge on a LinkedIn page (or no badge at all) says nothing about a person's worth. Don't use it to spread hate.
 
 ## What it does
 
@@ -50,7 +50,7 @@ Open any LinkedIn profile (or its full Experience / Education page) and badges a
 
 ## What it doesn't aim to do
 
-- **Rank people.** Tiers only appear as compliments. Most entries get none, and that says nothing bad about them.
+- **Put anyone down.** It hypes standout moves and never ranks anyone down. Tiers only appear as compliments, and most entries get none, which says nothing bad about them. The only jokes are light ones, like the super senior badge.
 - **Replace salary sites.** It borrows from Levels.fyi, Glassdoor and similar sources. For decisions like negotiating an offer, go to the source.
 - **Be a recruiting, hiring or screening tool.** Don't use it to judge candidates or make decisions about people.
 - **Be perfectly accurate.** Categories, tiers and LARP flags are judgment calls from a language model. When one is wrong, fix it in Settings → Estimates.

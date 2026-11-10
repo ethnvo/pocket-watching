@@ -11,6 +11,7 @@ Pocket Watching is a cracked meter: it shows how good someone is at what they do
   - No badge at all is the default. Most entries get nothing, and that's never a statement about the person.
   - LARP is the one negative flag, and only for wildly inflated titles, never for ordinary ones.
 - **Hype up, never belittle.** This covers companies, schools and categories too, not just people. Hyping something ("the AI-era answer to FAANG") is fine. Putting something down to do it is not: no "lowkey fell off", "lost its credibility", "a step below", "-lite". Name categories by what they are next to, not what they fall short of (FAANG-adjacent, not FAANG-lite).
+- **Light teasing is fine when it's about something trivial**, like how long school took ("Super senior", "SUPER DUPER SENIOR" stay). Never about skill, pay or worth. LARP reasons tease the title, never the person, and stay playful, not harsh.
 
 ## How we show it
 - **One mark, one meaning.** If a badge or check already says something, don't repeat it in text. The blue check means confirmed by you; the outlined check means community-reported. The word only appears when checks are turned off.
